@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: 'Dashboard Multichannel',
   description:
     'Dashboard pribadi untuk POS dropship, jobs freelance, Meta Ads, live selling, dan ledger profit bulanan.',
-  icons: { icon: '/favicon.svg' },
+  icons: { icon: '/branding/websensial-mark.png' },
   openGraph: {
     title: 'Dashboard Multichannel',
     description: 'POS, jobs, Meta Ads, live selling, dan ledger dalam satu tempat.',
