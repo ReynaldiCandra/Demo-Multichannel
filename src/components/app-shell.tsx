@@ -59,7 +59,13 @@ const navSections: Array<{ label: string; items: NavItem[] }> = [
         exact: true,
         moduleKey: 'pos',
       },
-      { href: '/pos', label: 'Penjualan', icon: ShoppingBag, activePaths: [], moduleKey: 'pos' },
+      {
+        href: '/pos/penjualan',
+        label: 'Penjualan',
+        icon: ShoppingBag,
+        activePaths: ['/pos/penjualan'],
+        moduleKey: 'pos',
+      },
       { href: '/toko', label: 'Analisa Toko', icon: Store, moduleKey: 'pos' },
       {
         href: '/pos/toko',
@@ -105,6 +111,7 @@ const navSections: Array<{ label: string; items: NavItem[] }> = [
 
 const searchRoutes: Record<string, string> = {
   pos: '/pos',
+  penjualan: '/pos/penjualan',
   produk: '/pos/produk',
   toko: '/pos/toko',
   kanal: '/pos/toko',
