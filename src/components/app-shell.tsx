@@ -66,7 +66,7 @@ const navSections: Array<{ label: string; items: NavItem[] }> = [
         activePaths: ['/pos/penjualan'],
         moduleKey: 'pos',
       },
-      { href: '/toko', label: 'Analisa Toko', icon: Store, moduleKey: 'pos' },
+      { href: '/toko', label: 'Analisa Toko', icon: BarChart3, moduleKey: 'pos' },
       {
         href: '/pos/toko',
         label: 'Kanal & Toko',
