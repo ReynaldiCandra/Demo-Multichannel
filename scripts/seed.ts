@@ -63,7 +63,7 @@ async function seedUsers() {
   }
 
   const ownerEmail = (process.env.SEED_OWNER_EMAIL ?? 'owner@websensial.com').toLowerCase();
-  const ownerPassword = process.env.SEED_OWNER_PASSWORD ?? 'ubah-password-ini';
+  const ownerPassword = process.env.SEED_OWNER_PASSWORD ?? 'owner123456';
   const demoPassword = process.env.SEED_DEMO_PASSWORD ?? 'demo1234';
 
   await db.insert(usersTable).values([
