@@ -148,6 +148,9 @@ export function useGetDashboardSummary(params: { month?: string } = {}) {
   return useQuery({
     queryKey: getGetDashboardSummaryQueryKey(params),
     queryFn: ({ signal }) => request<DashboardSummary>('/dashboard', { params, signal }),
+    // Sinkron ulang tiap 60 detik selama halaman terbuka, senada dengan
+    // banner insight — supaya tidak nyangkut kalau tab dibiarkan lama.
+    refetchInterval: 60_000,
   });
 }
 
@@ -357,7 +360,7 @@ export function useDeleteProduct(
 export function useCreateSale(options?: MutationOpts<SaleRow, { data: unknown }>) {
   return useInvalidating(
     ({ data }) => request<SaleRow>('/sales', { method: 'POST', body: data }),
-    ['sales', 'dashboard', 'ledger', 'sales-report', 'store-performance'],
+    ['sales', 'dashboard', 'ledger', 'sales-report', 'store-performance', 'products'],
     options,
   );
 }
@@ -367,7 +370,7 @@ export function useUpdateSale(
 ) {
   return useInvalidating(
     ({ saleId, data }) => request<SaleRow>(`/sales/${saleId}`, { method: 'PATCH', body: data }),
-    ['sales', 'dashboard', 'ledger', 'sales-report', 'store-performance'],
+    ['sales', 'dashboard', 'ledger', 'sales-report', 'store-performance', 'products'],
     options,
   );
 }
@@ -375,7 +378,7 @@ export function useUpdateSale(
 export function useDeleteSale(options?: MutationOpts<{ ok: boolean }, { saleId: string }>) {
   return useInvalidating(
     ({ saleId }) => request<{ ok: boolean }>(`/sales/${saleId}`, { method: 'DELETE' }),
-    ['sales', 'dashboard', 'ledger', 'sales-report', 'store-performance'],
+    ['sales', 'dashboard', 'ledger', 'sales-report', 'store-performance', 'products'],
     options,
   );
 }
@@ -486,7 +489,7 @@ export function useDeleteHost(options?: MutationOpts<{ ok: boolean }, { hostId: 
 export function useCreateSupplier(options?: MutationOpts<Supplier, { data: unknown }>) {
   return useInvalidating(
     ({ data }) => request<Supplier>('/suppliers', { method: 'POST', body: data }),
-    ['suppliers'],
+    ['suppliers', 'products'],
     options,
   );
 }
@@ -496,7 +499,7 @@ export function useUpdateSupplier(
 ) {
   return useInvalidating(
     ({ supplierId, data }) => request<Supplier>(`/suppliers/${supplierId}`, { method: 'PATCH', body: data }),
-    ['suppliers'],
+    ['suppliers', 'products'],
     options,
   );
 }
@@ -504,7 +507,7 @@ export function useUpdateSupplier(
 export function useDeleteSupplier(options?: MutationOpts<{ ok: boolean }, { supplierId: string }>) {
   return useInvalidating(
     ({ supplierId }) => request<{ ok: boolean }>(`/suppliers/${supplierId}`, { method: 'DELETE' }),
-    ['suppliers'],
+    ['suppliers', 'products'],
     options,
   );
 }

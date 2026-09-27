@@ -18,7 +18,15 @@ describe('laporan penjualan (SQL diuji di Postgres in-memory)', () => {
       .split('--> statement-breakpoint').join('')
       .split(';').map(x=>x.trim()).filter(x=>x && !/ROW LEVEL SECURITY/.test(x));
     for (const stmt of ddl) await pg.exec(stmt);
-    await pg.exec(readFileSync('supabase/migrations/0002_sales_status_order_fee.sql', 'utf8'));
+    for (const file of [
+      '0002_sales_status_order_fee.sql',
+      '0003_suppliers.sql',
+      '0004_safe_reporting_indexes_and_suppliers.sql',
+      '0005_product_supplier_image.sql',
+      '0006_supplier_sale_image.sql',
+    ]) {
+      await pg.exec(readFileSync(`supabase/migrations/${file}`, 'utf8'));
+    }
     // migrasi harus aman dijalankan dua kali
     await pg.exec(readFileSync('supabase/migrations/0002_sales_status_order_fee.sql', 'utf8'));
     const [a] = await db.insert(schema.storesTable).values({ name: 'Rise & Wars', channel: 'Shopee' }).returning();
