@@ -25,6 +25,7 @@ import type {
   SalesReportSort,
   SettlementRow,
   StorePerformanceReport,
+  TaskRow,
   StoreRow,
   Supplier,
 } from './types';
@@ -229,6 +230,45 @@ export function useDeleteInvoice(options?: MutationOpts<unknown, { invoiceId: st
   return useInvalidating(
     ({ invoiceId }) => request<unknown>(`/invoices/${invoiceId}`, { method: 'DELETE' }),
     ['invoices'],
+    options,
+  );
+}
+
+/* --------------------------------- kanban -------------------------------- */
+
+export const getListTasksQueryKey = () => ['tasks'] as const;
+
+/** Kartu kanban tugas bebas (todo/doing/done). */
+export function useListTasks() {
+  return useQuery({
+    queryKey: getListTasksQueryKey(),
+    queryFn: ({ signal }) => request<TaskRow[]>('/tasks', { signal }),
+  });
+}
+
+export function useCreateTask(options?: MutationOpts<TaskRow, { data: unknown }>) {
+  return useInvalidating(
+    ({ data }) => request<TaskRow>('/tasks', { method: 'POST', body: data }),
+    ['tasks'],
+    options,
+  );
+}
+
+export function useUpdateTask(
+  options?: MutationOpts<TaskRow, { taskId: string; data: unknown }>,
+) {
+  return useInvalidating(
+    ({ taskId, data }) =>
+      request<TaskRow>(`/tasks/${taskId}`, { method: 'PATCH', body: data }),
+    ['tasks'],
+    options,
+  );
+}
+
+export function useDeleteTask(options?: MutationOpts<unknown, { taskId: string }>) {
+  return useInvalidating(
+    ({ taskId }) => request<unknown>(`/tasks/${taskId}`, { method: 'DELETE' }),
+    ['tasks'],
     options,
   );
 }

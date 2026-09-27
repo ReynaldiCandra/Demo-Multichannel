@@ -104,7 +104,7 @@ const navSections: Array<{ label: string; items: NavItem[] }> = [
     label: 'WORKFLOW',
     items: [
       { href: '/jobs', label: 'Freelance Ads', icon: BriefcaseBusiness, moduleKey: 'jobs' },
-      { href: '/jobs', label: 'Kanban', icon: BarChart3, activePaths: [], moduleKey: 'jobs' },
+      { href: '/kanban', label: 'Kanban', icon: BarChart3, moduleKey: 'kanban' },
     ],
   },
   {
@@ -127,6 +127,9 @@ const searchRoutes: Record<string, string> = {
   meta: '/meta-ads',
   job: '/jobs',
   jobs: '/jobs',
+  kanban: '/kanban',
+  tugas: '/kanban',
+  todo: '/kanban',
   live: '/live',
   supplier: '/suppliers',
   suplier: '/suppliers',

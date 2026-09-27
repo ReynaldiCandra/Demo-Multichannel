@@ -210,6 +210,21 @@ export type InvoiceDetail = InvoiceRow & {
   payments: Array<{ id: string; paidAt: string; amount: number; label: string | null }>;
 };
 
+export type TaskStatus = 'todo' | 'doing' | 'done';
+export type TaskPriority = 'low' | 'normal' | 'high';
+
+/** Kartu kanban tugas bebas (Fase kanban). */
+export type TaskRow = {
+  id: string;
+  title: string;
+  notes: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate: string | null;
+  position: number;
+  completedAt: string | null;
+};
+
 export type AppModule = {
   key: string;
   label: string;

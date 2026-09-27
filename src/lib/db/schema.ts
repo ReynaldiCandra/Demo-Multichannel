@@ -225,6 +225,30 @@ export const invoicePaymentsTable = pgTable(
   (table) => [index('invoice_payments_invoice_id_idx').on(table.invoiceId, table.paidAt)],
 );
 
+/**
+ * Kanban tugas bebas (to-do list bisnis): kartu manual, tiga kolom todo →
+ * doing → done. Urutan dalam kolom memakai `position` (sisip = rata-rata
+ * posisi dua kartu tetangga).
+ */
+export const tasksTable = pgTable(
+  'tasks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    title: text('title').notNull(),
+    notes: text('notes'),
+    status: text('status').notNull().default('todo'),
+    priority: text('priority').notNull().default('normal'),
+    dueDate: date('due_date', { mode: 'string' }),
+    position: numeric('position', { precision: 14, scale: 4, mode: 'number' })
+      .notNull()
+      .default(1000),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('tasks_status_position_idx').on(table.status, table.position)],
+);
+
 export const hostsTable = pgTable('hosts', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
@@ -265,6 +289,7 @@ export type Settlement = typeof settlementsTable.$inferSelect;
 export type Invoice = typeof invoicesTable.$inferSelect;
 export type InvoiceItem = typeof invoiceItemsTable.$inferSelect;
 export type InvoicePayment = typeof invoicePaymentsTable.$inferSelect;
+export type Task = typeof tasksTable.$inferSelect;
 export type LiveSession = typeof liveSessionsTable.$inferSelect;
 
 /**

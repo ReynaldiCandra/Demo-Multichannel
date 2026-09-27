@@ -53,6 +53,7 @@ const MODULES = [
   { key: 'live', label: 'Live Selling', description: 'Sesi live, host, dan komisi.', isCore: false, sortOrder: 4 },
   { key: 'jobs', label: 'Jobs Freelance', description: 'Kontrak klien, biaya, pembayaran, dan deadline.', isCore: false, sortOrder: 5 },
   { key: 'laporan', label: 'Laporan & Ledger', description: 'Ledger profit bulanan dan laporan omzet per toko.', isCore: false, sortOrder: 6 },
+  { key: 'kanban', label: 'Kanban', description: 'Papan tugas bebas: to-do, sedang dikerjakan, selesai.', isCore: false, sortOrder: 7 },
 ];
 
 async function seedUsers() {

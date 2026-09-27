@@ -175,6 +175,30 @@ export const ModuleUpdateInput = z.object({
   isEnabled: z.boolean(),
 });
 
+export const TASK_STATUSES = ['todo', 'doing', 'done'] as const;
+export const TASK_PRIORITIES = ['low', 'normal', 'high'] as const;
+
+export const TaskCreateInput = z.object({
+  title: z.string().trim().min(1, 'Judul tugas wajib diisi').max(200),
+  notes: nullableText,
+  priority: z.enum(TASK_PRIORITIES).default('normal'),
+  dueDate: optionalDateString,
+});
+
+export const TaskUpdateInput = z
+  .object({
+    title: z.string().trim().min(1).max(200).optional(),
+    notes: nullableText,
+    priority: z.enum(TASK_PRIORITIES).optional(),
+    dueDate: optionalDateString,
+    status: z.enum(TASK_STATUSES).optional(),
+    // Posisi boleh negatif — kartu baru selalu ditaruh di min(posisi) - 100.
+    position: z.coerce.number().optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'Tidak ada perubahan yang dikirim',
+  });
+
 export type StoreInputType = z.infer<typeof StoreInput>;
 export type ProductInputType = z.infer<typeof ProductInput>;
 export type SaleInputType = z.infer<typeof SaleInput>;
