@@ -1,27 +1,31 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import {
   useDeleteSale,
   useListProducts,
   useListSales,
+  useListStores,
   useUpdateSale,
 } from '@/lib/api/hooks';
 import type { SaleRow, SaleStatus } from '@/lib/api/types';
 import { Button, Panel, PageTitle, Pagination, State } from '@/components/ui';
 import { cn, dateLabel, monthNow, number } from '@/lib/format';
-import { PAGE_SIZE, STATUS_LABEL, SaleFormModal, SalesTable } from './_shared';
+import { PAGE_SIZE, STATUS_LABEL, SaleFormModal, SalesTable } from '../_shared';
 
-export default function PosPage() {
+export default function PenjualanPage() {
   const [editing, setEditing] = useState<SaleRow | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [month, setMonth] = useState(monthNow);
+  const [storeId, setStoreId] = useState('all');
   const [statusFilter, setStatusFilter] = useState<SaleStatus | 'all'>('all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  const sales = useListSales({ month });
+  const sales = useListSales({ month, storeId: storeId === 'all' ? undefined : storeId });
+  const stores = useListStores();
   const products = useListProducts({ activeOnly: true });
   const update = useUpdateSale();
   const remove = useDeleteSale();
@@ -51,24 +55,18 @@ export default function PosPage() {
     });
   }, [rows, statusFilter, search]);
 
-  // Input Harian: capture cepat. Hanya menampilkan transaksi bulan berjalan
-  // untuk pengecekan sekilas — pengelolaan & audit menyeluruh ada di menu Penjualan.
   return (
     <>
       <PageTitle
-        eyebrow="INPUT HARIAN / CAPTURE"
-        title="Catat penjualan hari ini."
-        description="Satu transaksi, satu snapshot modal. Untuk melihat, memfilter, dan mengelola seluruh riwayat transaksi, buka menu Penjualan."
+        eyebrow="PENJUALAN / KELOLA & AUDIT"
+        title="Kelola seluruh transaksi."
+        description="Filter, telusuri, dan koreksi transaksi yang sudah tercatat. Untuk mencatat transaksi baru dengan cepat, buka menu Input Harian."
         action={
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-            data-testid="button-open-sale-form"
-          >
-            <Plus size={16} /> Catat penjualan
-          </Button>
+          <Link href="/pos">
+            <Button variant="secondary" data-testid="button-goto-input-harian">
+              Ke Input Harian
+            </Button>
+          </Link>
         }
       />
 
@@ -103,6 +101,23 @@ export default function PosPage() {
               data-testid="input-sales-search"
             />
           </label>
+          <select
+            className="month-input"
+            value={storeId}
+            onChange={(event) => {
+              setStoreId(event.target.value);
+              setPage(1);
+            }}
+            aria-label="Filter toko/kanal"
+            data-testid="select-sales-store"
+          >
+            <option value="all">Semua toko/kanal</option>
+            {(stores.data ?? []).map((store) => (
+              <option key={store.id} value={store.id}>
+                {store.name} ({store.channel})
+              </option>
+            ))}
+          </select>
           <input
             className="month-input"
             type="month"
@@ -152,9 +167,9 @@ export default function PosPage() {
         )}
       </Panel>
 
-      {formOpen && products.data && (
+      {formOpen && editing && products.data && (
         <SaleFormModal
-          key={editing?.id ?? 'new'}
+          key={editing.id}
           sale={editing}
           products={products.data}
           onClose={closeForm}

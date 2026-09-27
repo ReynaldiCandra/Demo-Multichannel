@@ -10,6 +10,7 @@ import {
   ChevronRight,
   CircleDollarSign,
   LayoutDashboard,
+  LineChart,
   Menu,
   Package,
   PanelLeftClose,
@@ -59,8 +60,14 @@ const navSections: Array<{ label: string; items: NavItem[] }> = [
         exact: true,
         moduleKey: 'pos',
       },
-      { href: '/pos', label: 'Penjualan', icon: ShoppingBag, activePaths: [], moduleKey: 'pos' },
-      { href: '/toko', label: 'Analisa Toko', icon: Store, moduleKey: 'pos' },
+      {
+        href: '/pos/penjualan',
+        label: 'Penjualan',
+        icon: ShoppingBag,
+        activePaths: ['/pos/penjualan'],
+        moduleKey: 'pos',
+      },
+      { href: '/toko', label: 'Analisa Toko', icon: LineChart, moduleKey: 'pos' },
       {
         href: '/pos/toko',
         label: 'Kanal & Toko',
@@ -84,7 +91,13 @@ const navSections: Array<{ label: string; items: NavItem[] }> = [
     label: 'KEUANGAN',
     items: [
       { href: '/laporan', label: 'Settlement', icon: CircleDollarSign, moduleKey: 'laporan' },
-      { href: '/jobs', label: 'Invoice', icon: ReceiptText, activePaths: [], moduleKey: 'jobs' },
+      {
+        href: '/invoice',
+        label: 'Invoice',
+        icon: ReceiptText,
+        activePaths: ['/invoice'],
+        moduleKey: 'jobs',
+      },
     ],
   },
   {
