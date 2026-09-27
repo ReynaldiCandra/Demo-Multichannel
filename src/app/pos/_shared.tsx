@@ -1,13 +1,19 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { ExternalLink, Eye, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useCreateSale, useUpdateSale, uploadImage } from '@/lib/api/hooks';
+import {
+  useCreateSale,
+  useListProducts,
+  useListSuppliers,
+  useUpdateSale,
+  uploadImage,
+} from '@/lib/api/hooks';
 import type { ProductRow, SaleRow, SaleStatus } from '@/lib/api/types';
 import { autoPlatformFee } from '@/lib/fees';
-import { Badge, Button, Field, ImagePreviewButton, Modal, State } from '@/components/ui';
-import { cn, dateLabel, money, number, today } from '@/lib/format';
+import { Badge, Button, Field, ImagePreviewButton, Modal, Panel, State } from '@/components/ui';
+import { cn, dateLabel, money, number, today, waLink } from '@/lib/format';
 
 export const STATUS_LABEL: Record<SaleStatus, string> = {
   selesai: 'Selesai',
@@ -214,18 +220,171 @@ export function SaleFormModal({
   );
 }
 
+/**
+ * Panel detail per transaksi (Fase 4): foto bukti, rincian angka, kartu
+ * produk, dan supplier terhubung. Dipakai halaman Penjualan via tombol mata
+ * di tabel; Input Harian tidak memakainya supaya tetap ringkas.
+ */
+export function SaleDetailPanel({ sale, onClose }: { sale: SaleRow; onClose: () => void }) {
+  // Ambil produk mandiri (tanpa activeOnly) supaya produk yang sudah
+  // dinonaktifkan tetap bisa diaudit dari transaksi lamanya.
+  const products = useListProducts();
+  const suppliers = useListSuppliers();
+  const product = products.data?.find((item) => item.id === sale.productId) ?? null;
+  const supplier = product?.supplierId
+    ? (suppliers.data?.find((item) => item.id === product.supplierId) ?? null)
+    : null;
+  const counted = sale.status === 'selesai';
+  const supplierWa = waLink(supplier?.whatsapp);
+
+  return (
+    <Modal title="Detail transaksi" onClose={onClose}>
+      <div className="sale-detail">
+        <div className="sale-detail-hero">
+          <ImagePreviewButton src={sale.imageUrl} alt={`Foto transaksi ${sale.productName}`} />
+          <div className="sale-detail-title">
+            <strong>{sale.productName}</strong>
+            <small>
+              {sale.storeName} · {dateLabel(sale.date)}
+              {sale.orderNumber ? ` · No. ${sale.orderNumber}` : ''}
+            </small>
+            <div className="sale-detail-badges">
+              <Badge tone={STATUS_TONE[sale.status]}>{STATUS_LABEL[sale.status]}</Badge>
+              <Badge tone={counted ? 'good' : 'warn'}>
+                {counted ? 'Dihitung sebagai omzet' : 'Tidak dihitung sebagai omzet'}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        <div className="ledger-list">
+          <div className="ledger-row">
+            <span>
+              <strong>Qty</strong>
+              <small>
+                {number(sale.qty)} pcs × {money(sale.actualPrice)}
+              </small>
+            </span>
+            <b className="mono">{money(sale.actualPrice * sale.qty)}</b>
+          </div>
+          {sale.discount > 0 && (
+            <div className="ledger-row">
+              <span>
+                <strong>Diskon</strong>
+              </span>
+              <b className="mono">− {money(sale.discount)}</b>
+            </div>
+          )}
+          <div className="ledger-row">
+            <span>
+              <strong>Omzet</strong>
+            </span>
+            <b className="mono">{money(sale.grossRevenue)}</b>
+          </div>
+          <div className="ledger-row">
+            <span>
+              <strong>Biaya platform</strong>
+            </span>
+            <b className="mono">{money(sale.platformFee)}</b>
+          </div>
+          <div className="ledger-row">
+            <span>
+              <strong>Modal / HPP</strong>
+              <small>modal {money(sale.modalSnapshot)} per pcs saat transaksi</small>
+            </span>
+            <b className="mono">{money(sale.modalSnapshot * sale.qty)}</b>
+          </div>
+          <div className="ledger-row">
+            <span>
+              <strong>Profit</strong>
+            </span>
+            <b className={cn('mono', counted ? 'profit-text' : 'muted')}>
+              {counted ? money(sale.grossProfit) : '—'}
+            </b>
+          </div>
+        </div>
+
+        <div className="detail-grid">
+          <Panel className="sale-detail-card">
+            <div className="section-head">
+              <div>
+                <div className="eyebrow">PRODUK</div>
+                <h2>{product?.name ?? sale.productName}</h2>
+              </div>
+            </div>
+            {product ? (
+              <div className="sale-detail-entity">
+                <ImagePreviewButton src={product.imageUrl} alt={`Foto produk ${product.name}`} />
+                <div>
+                  <strong>{product.name}</strong>
+                  <small>
+                    {product.storeName} ({product.channel})
+                  </small>
+                  <small>
+                    Harga jual {money(product.sellingPrice)} · modal {money(product.modal)}
+                  </small>
+                </div>
+              </div>
+            ) : (
+              <span className="muted sale-detail-muted">Produk tidak ditemukan.</span>
+            )}
+          </Panel>
+
+          <Panel className="sale-detail-card">
+            <div className="section-head">
+              <div>
+                <div className="eyebrow">SUPPLIER</div>
+                <h2>{supplier?.name ?? 'Belum terhubung'}</h2>
+              </div>
+            </div>
+            {supplier ? (
+              <div className="sale-detail-entity">
+                <ImagePreviewButton src={supplier.imageUrl} alt={`Foto supplier ${supplier.name}`} />
+                <div>
+                  <strong>{supplier.name}</strong>
+                  <small>
+                    {[supplier.category, supplier.city].filter(Boolean).join(' · ') || 'Supplier'}
+                  </small>
+                  {supplierWa && (
+                    <a
+                      href={supplierWa}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-link"
+                      data-testid="link-sale-supplier-wa"
+                    >
+                      <ExternalLink size={11} /> Chat WhatsApp
+                    </a>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <span className="muted sale-detail-muted">
+                Produk ini belum punya supplier terdata.
+              </span>
+            )}
+          </Panel>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function SalesTable({
   sales,
   total,
   onEdit,
   onStatus,
   onDelete,
+  onDetail,
 }: {
   sales: SaleRow[];
   total: number;
   onEdit: (sale: SaleRow) => void;
   onStatus: (sale: SaleRow, status: SaleStatus) => void;
   onDelete: (sale: SaleRow) => void;
+  /** Kalau tidak diberikan, tombol detail tidak dirender (dipakai Input Harian). */
+  onDetail?: (sale: SaleRow) => void;
 }) {
   if (!total) return <State type="empty" />;
 
@@ -287,6 +446,16 @@ export function SalesTable({
                   </td>
                   <td className="right">
                     <div className="button-pair table-actions">
+                      {onDetail && (
+                        <button
+                          className="icon-btn"
+                          onClick={() => onDetail(sale)}
+                          aria-label="Detail transaksi"
+                          data-testid={`button-detail-sale-${sale.id}`}
+                        >
+                          <Eye size={15} />
+                        </button>
+                      )}
                       <button
                         className="icon-btn"
                         onClick={() => onEdit(sale)}

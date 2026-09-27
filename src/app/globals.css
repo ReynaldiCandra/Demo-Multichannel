@@ -641,6 +641,20 @@ h2 { font: 700 16px/1.2 var(--app-font-serif); letter-spacing: -.02em; }
 .report-body.is-stale { opacity: .55; pointer-events: none; }
 .kpi-grid-compact .kpi-card { min-height: 104px; }
 .kpi-grid-compact .kpi-value { font-size: 17px; }
+
+/* Detail transaksi Penjualan (Fase 4): hero foto + kartu produk/supplier. */
+.sale-detail { display: grid; gap: 18px; }
+.sale-detail-hero { display: flex; align-items: center; gap: 14px; }
+.sale-detail-title { display: grid; gap: 5px; min-width: 0; }
+.sale-detail-title strong { font-size: 14px; }
+.sale-detail-title small { color: hsl(var(--muted-foreground)); font-size: 10px; }
+.sale-detail-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; }
+.sale-detail-entity { display: flex; align-items: center; gap: 12px; }
+.sale-detail-entity > div { display: grid; gap: 3px; min-width: 0; }
+.sale-detail-entity small { color: hsl(var(--muted-foreground)); font-size: 10px; }
+.sale-detail-muted { font-size: 11px; }
+.sale-detail .detail-grid { margin-top: 2px; }
+.sale-detail .ledger-row b { font-size: 12px !important; }
 .marketplace-button { width: 100%; border: 0; background: transparent; text-align: left; cursor: pointer; font: inherit; color: inherit; border-radius: 8px; }
 .marketplace-button:hover { background: hsl(var(--secondary)); }
 .daily-bars { display: flex; align-items: flex-end; gap: 4px; height: 190px; padding-top: 8px; overflow-x: auto; }

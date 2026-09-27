@@ -16,7 +16,7 @@ diputuskan balik ke urutan: **Fase 2 → Fase 4 (lanjutan)**.
 | 1 | Routing/struktur menu | ✅ Selesai | Penjualan & Invoice punya route sendiri; icon Analisa Toko vs Kanal & Toko tidak nabrak lagi |
 | 2 | Realtime sync | ✅ Selesai | `refetchOnWindowFocus: true` global + `refetchInterval` 60 detik di `useGetDashboardSummary`; tinggal verifikasi manual terakhir di browser |
 | 3 | Upload foto Produk & Stok | 🔨 Tinggal env var | Kode upload dan migration 0005/0006 sudah lengkap; kolom `image_url` terverifikasi ada di database. Root cause terkonfirmasi: `BLOB_READ_WRITE_TOKEN` kosong di `.env.local`. Route upload sekarang memberi pesan error yang jelas. Tinggal isi token di `.env.local` + Vercel (lalu redeploy), dan tes upload |
-| 4 | Penjualan lanjutan | 🔨 Dikerjakan | Folder salah taruh sudah dibetulkan: halaman kelola/audit jalan di `/pos/penjualan` (tabel, filter toko/bulan, tab status, search, pagination; komponen bersama di `src/app/pos/_shared.tsx`). Belum: ringkasan KPI + panel detail per transaksi (riwayat + kartu produk/foto/supplier) |
+| 4 | Penjualan lanjutan | ✅ Selesai | Halaman kelola/audit `/pos/penjualan`: KPI ringkasan (omzet/profit/HPP/pcs dari transaksi selesai, mengikuti filter aktif), tabel + tab status + search + pagination, dan panel detail per transaksi (foto bukti, rincian angka, kartu produk/foto, supplier + link WhatsApp). Input Harian `/pos` tetap ringkas tanpa panel detail |
 | 5 | Settlement | ⏳ Belum | `/laporan` saat ini isinya ledger/P&L, bukan status pencairan dana marketplace — butuh kolom skema baru |
 | 6 | Invoice | ⏳ Belum (route ada) | Route `/invoice` sudah ada + terpasang di menu, masih placeholder. Butuh custom CRUD (logo, scope kerja, item, total, deskripsi) + export PDF |
 | 7 | Ganti `window.confirm()` → `ConfirmDialog` | ⏳ Belum | Dipakai di Produk, Toko, Supplier, Live, Jobs, Meta Ads (`master-page.tsx`), plus Input Harian (`/pos`) dan Penjualan (`/pos/penjualan`) |
@@ -74,7 +74,14 @@ Root cause ditemukan di `src/app/providers.tsx` dan `src/lib/api/hooks.ts`:
   typecheck gagal (import `../_shared` tidak resolve). Sudah dipindah
   ke `src/app/pos/penjualan/` — sejalan dengan nav `/pos/penjualan` di
   `app-shell.tsx`.
-- Komponen bersama (`SaleFormModal`, `SalesTable`, konstanta status)
-  hidup di `src/app/pos/_shared.tsx`, dipakai Input Harian (`/pos`)
-  dan Penjualan (`/pos/penjualan`).
-- Belum dibuat: ringkasan KPI dan panel detail per transaksi.
+- Komponen bersama (`SaleFormModal`, `SalesTable`, `SaleDetailPanel`,
+  konstanta status) hidup di `src/app/pos/_shared.tsx`, dipakai Input
+  Harian (`/pos`) dan Penjualan (`/pos/penjualan`).
+- KPI ringkasan dihitung client-side dari hasil filter yang sedang
+  tampil (hanya status selesai), senada dengan aturan ledger server.
+- Panel detail (`SaleDetailPanel`) dibuka lewat tombol mata di tabel
+  Penjualan; props `onDetail` pada `SalesTable` opsional, jadi Input
+  Harian tidak ikut berubah. Panel menampilkan foto bukti, rincian
+  qty × harga, diskon, biaya platform, HPP (snapshot modal), profit,
+  kartu produk (foto + harga), dan supplier (foto + kategori/kota +
+  link wa.me).
