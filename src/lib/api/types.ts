@@ -53,6 +53,25 @@ export type SaleRow = {
 
 export type SaleStatus = 'selesai' | 'batal' | 'retur';
 
+export type SettlementStatus = 'pending' | 'released';
+
+/** Baris status pencairan dana per toko per bulan (Fase 5). */
+export type SettlementRow = {
+  storeId: string;
+  storeName: string;
+  channel: string;
+  month: string;
+  /** Netto dari data dashboard: penjualan selesai − biaya platform. */
+  expectedAmount: number;
+  /** Omzet & biaya platform mentah, untuk ditampilkan sebagai rincian. */
+  revenue: number;
+  platformFee: number;
+  status: SettlementStatus;
+  /** Nominal riil dari dashboard marketplace; null = pakai expectedAmount. */
+  releasedAmount: number | null;
+  releasedDate: string | null;
+};
+
 export type MetaAdTestRow = {
   id: string;
   productName: string;

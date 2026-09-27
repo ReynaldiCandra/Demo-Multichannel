@@ -21,6 +21,7 @@ import type {
   SaleRow,
   SalesReport,
   SalesReportSort,
+  SettlementRow,
   StorePerformanceReport,
   StoreRow,
   Supplier,
@@ -159,6 +160,26 @@ export function useListStores() {
     queryKey: getListStoresQueryKey(),
     queryFn: ({ signal }) => request<StoreRow[]>('/stores', { signal }),
   });
+}
+
+export const getListSettlementsQueryKey = (month: string) => ['settlements', month] as const;
+
+/** Status pencairan dana marketplace per toko untuk satu bulan (Fase 5). */
+export function useListSettlements(month: string) {
+  return useQuery({
+    queryKey: getListSettlementsQueryKey(month),
+    queryFn: ({ signal }) => request<SettlementRow[]>('/settlements', { params: { month }, signal }),
+  });
+}
+
+/** Upsert status pencairan untuk satu toko satu bulan. */
+export function useUpdateSettlement(options?: MutationOpts<unknown, { storeId: string; month: string; data: unknown }>) {
+  return useInvalidating(
+    ({ storeId, month, data }) =>
+      request<unknown>(`/settlements/${storeId}`, { method: 'PATCH', params: { month }, body: data }),
+    ['settlements'],
+    options,
+  );
 }
 
 export function useListProducts(params: { activeOnly?: boolean; storeId?: string } = {}) {

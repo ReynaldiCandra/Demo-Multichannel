@@ -144,6 +144,33 @@ export const jobPaymentsTable = pgTable('job_payments', {
   type: text('type').notNull(),
 }, (table) => [index('job_payments_job_id_idx').on(table.jobId)]);
 
+/**
+ * Fase 5: status pencairan dana marketplace per toko/kanal per bulan.
+ * Netto dihitung live dari penjualan selesai − biaya platform; baris ini
+ * hanya menyimpan status, nominal riil opsional (hybrid), dan tanggal cair.
+ */
+export const settlementsTable = pgTable(
+  'settlements',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storeId: uuid('store_id')
+      .notNull()
+      .references(() => storesTable.id, { onDelete: 'cascade' }),
+    month: text('month').notNull(),
+    // pending = dana masih tertahan di marketplace; released = sudah dicairkan.
+    status: text('status').notNull().default('pending'),
+    // Nominal riil yang benar-benar cair; NULL = pakai angka perhitungan sendiri.
+    releasedAmount: integer('released_amount'),
+    releasedDate: date('released_date', { mode: 'string' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('settlements_store_month_unique').on(table.storeId, table.month),
+    index('settlements_month_idx').on(table.month),
+  ],
+);
+
 export const hostsTable = pgTable('hosts', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
@@ -180,6 +207,7 @@ export type JobCost = typeof jobCostsTable.$inferSelect;
 export type JobPayment = typeof jobPaymentsTable.$inferSelect;
 export type Host = typeof hostsTable.$inferSelect;
 export type Supplier = typeof suppliersTable.$inferSelect;
+export type Settlement = typeof settlementsTable.$inferSelect;
 export type LiveSession = typeof liveSessionsTable.$inferSelect;
 
 /**

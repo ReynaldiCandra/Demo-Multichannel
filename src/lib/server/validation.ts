@@ -127,6 +127,15 @@ export const MonthQuery = z
   .regex(/^\d{4}-\d{2}$/, 'Format bulan harus YYYY-MM')
   .optional();
 
+export const SETTLEMENT_STATUSES = ['pending', 'released'] as const;
+
+export const SettlementInput = z.object({
+  status: z.enum(SETTLEMENT_STATUSES),
+  /** Wajib saat status released: nominal riil yang benar-benar cair. */
+  releasedAmount: z.coerce.number().int().min(0).nullable().optional(),
+  releasedDate: optionalDateString,
+});
+
 export const ModuleUpdateInput = z.object({
   isEnabled: z.boolean(),
 });
