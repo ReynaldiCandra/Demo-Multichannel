@@ -15,7 +15,7 @@ diputuskan balik ke urutan: **Fase 2 → Fase 4 (lanjutan)**.
 |---|------|--------|---------|
 | 1 | Routing/struktur menu | ✅ Selesai | Penjualan & Invoice punya route sendiri; icon Analisa Toko vs Kanal & Toko tidak nabrak lagi |
 | 2 | Realtime sync | ✅ Selesai | `refetchOnWindowFocus: true` global + `refetchInterval` 60 detik di `useGetDashboardSummary`; tinggal verifikasi manual terakhir di browser |
-| 3 | Upload foto Produk & Stok | 🔨 Tinggal env var | Kode upload dan migration 0005/0006 sudah lengkap; kolom `image_url` terverifikasi ada di database. Root cause terkonfirmasi: `BLOB_READ_WRITE_TOKEN` kosong di `.env.local`. Route upload sekarang memberi pesan error yang jelas. Tinggal isi token di `.env.local` + Vercel (lalu redeploy), dan tes upload |
+| 3 | Upload foto Produk & Stok | ✅ Selesai | Root cause sudah berlapis selesai: (1) `BLOB_READ_WRITE_TOKEN` kosong di `.env.local`, lalu (2) Blob store pertama dibuat private sehingga `put(access: 'public')` ditolak — diselesaikan dengan store **public** + token baru. Upload end-to-end terverifikasi lokal: file masuk ke Blob, URL publik hidup, tersimpan di produk, dan tampil. Untuk production: pastikan token yang sama ada di Environment Variables Vercel lalu redeploy |
 | 4 | Penjualan lanjutan | ✅ Selesai | Halaman kelola/audit `/pos/penjualan`: KPI ringkasan (omzet/profit/HPP/pcs dari transaksi selesai, mengikuti filter aktif), tabel + tab status + search + pagination, dan panel detail per transaksi (foto bukti, rincian angka, kartu produk/foto, supplier + link WhatsApp). Input Harian `/pos` tetap ringkas tanpa panel detail |
 | 5 | Settlement | ✅ Selesai | Tab Settlement di `/laporan`: dana netto per toko dihitung live (penjualan selesai − biaya platform, konsisten dengan ledger), KPI belum/sudah cair, tandai cair dengan nominal riil dari marketplace (hybrid) + tanggal cair, bisa dibatalkan. Skema: tabel `settlements` (migration `0007_settlements.sql`, sudah di-apply ke database) |
 | 6 | Invoice | ✅ Selesai | CRUD custom di `/invoice` (nomor unik, judul, klien/penerbit + alamat, tanggal/tempo, deskripsi, scope kerja, logo upload, item bebas qty desimal, pembayaran DP/cicilan/pelunasan, catatan). Status lunas otomatis dari sisa tagihan. Dokumen siap cetak di `/invoice/[id]` + export PDF via print browser. Skema: `invoices`, `invoice_items`, `invoice_payments` (migration `0008_invoices.sql`, sudah di-apply) |
@@ -51,7 +51,7 @@ Root cause ditemukan di `src/app/providers.tsx` dan `src/lib/api/hooks.ts`:
    `products`, supaya agregat stok/supplier di daftar produk ikut
    segar setelah ada perubahan.
 
-## Fase 3 — Upload foto: diagnosis (terkonfirmasi)
+## Fase 3 — Upload foto: diagnosis (terkonfirmasi & selesai)
 
 - Kode upload sudah lengkap sejak awal (`master-page.tsx`,
   `suppliers/page.tsx`, `pos/_shared.tsx` + endpoint
@@ -59,14 +59,17 @@ Root cause ditemukan di `src/app/providers.tsx` dan `src/lib/api/hooks.ts`:
 - Migration `0005_product_supplier_image.sql` dan
   `0006_supplier_sale_image.sql` sudah ter-apply — kolom
   `products.image_url`, `sales.image_url`, `suppliers.image_url` ada.
-- Root cause: `BLOB_READ_WRITE_TOKEN` tidak ada di `.env.local`.
-  Terbukti lewat tes langsung: POST file ke endpoint upload membalas
-  500 dengan pesan konfigurasi penyimpanan.
-- Kedua route upload sekarang membungkus `put()` dengan try/catch dan
-  mengembalikan pesan yang menjelaskan penyebabnya, bukan 500 generik.
-- Langkah user selanjutnya: buat token Read-Write di Vercel → Storage
-  → Blob store, isi di `.env.local` dan Environment Variables Vercel,
-  redeploy, lalu tes upload produk dari menu Produk & Stok.
+- Root cause lapis 1: `BLOB_READ_WRITE_TOKEN` tidak ada di `.env.local`
+  — terbukti lewat tes langsung; sekarang sudah diisi.
+- Root cause lapis 2: Blob store pertama dibuat **private**, sedangkan
+  aplikasi mengunggah `access: 'public'` supaya foto bisa ditampilkan
+  langsung di `<img>`. Pesan error jelas dari try/catch:
+  "Cannot use public access on a private store". Diselesaikan dengan
+  store **public** + token baru.
+- Verifikasi end-to-end lokal (lulus semua): upload → URL publik 200 →
+  tersimpan di produk (`imageUrl`) → foto tampil; data uji dipulihkan.
+- Langkah production: samakan `BLOB_READ_WRITE_TOKEN` (dari store
+  public) di Environment Variables Vercel, lalu redeploy.
 
 ## Fase 4 — Penjualan lanjutan: catatan struktur
 
