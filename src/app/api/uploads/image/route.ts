@@ -29,11 +29,20 @@ export const POST = handler(async (request: Request) => {
   }
 
   const extension = file.type === 'image/png' ? 'png' : file.type === 'image/jpeg' ? 'jpg' : 'webp';
-  const blob = await put(`${kind}/${crypto.randomUUID()}.${extension}`, file, {
-    access: 'public',
-    addRandomSuffix: false,
-    contentType: file.type,
-  });
-
-  return NextResponse.json({ url: blob.url });
+  try {
+    const blob = await put(`${kind}/${crypto.randomUUID()}.${extension}`, file, {
+      access: 'public',
+      addRandomSuffix: false,
+      contentType: file.type,
+    });
+    return NextResponse.json({ url: blob.url });
+  } catch (error) {
+    // Tanpa ini, token Blob yang kosong/salah hanya menghasilkan 500 generik
+    // dan admin tidak tahu harus mengecek apa.
+    console.error('Upload ke Vercel Blob gagal:', error);
+    return NextResponse.json(
+      { error: 'Upload foto gagal — konfigurasi penyimpanan (BLOB_READ_WRITE_TOKEN).' },
+      { status: 500 },
+    );
+  }
 });
