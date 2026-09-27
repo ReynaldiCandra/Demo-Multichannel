@@ -184,6 +184,32 @@ export type DashboardSummary = {
   recentSales: SaleRow[];
 };
 
+/** Baris ringkas invoice untuk daftar (Fase 6). */
+export type InvoiceRow = {
+  id: string;
+  invoiceNumber: string;
+  title: string;
+  clientName: string;
+  issueDate: string;
+  dueDate: string | null;
+  total: number;
+  paid: number;
+  balance: number;
+};
+
+/** Detail lengkap invoice + item + pembayaran. */
+export type InvoiceDetail = InvoiceRow & {
+  clientAddress: string | null;
+  issuerName: string | null;
+  issuerAddress: string | null;
+  description: string | null;
+  scopeText: string | null;
+  logoUrl: string | null;
+  notes: string | null;
+  items: Array<{ id: string; position: number; description: string; qty: number; unitPrice: number; amount: number }>;
+  payments: Array<{ id: string; paidAt: string; amount: number; label: string | null }>;
+};
+
 export type AppModule = {
   key: string;
   label: string;

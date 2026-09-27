@@ -655,6 +655,44 @@ h2 { font: 700 16px/1.2 var(--app-font-serif); letter-spacing: -.02em; }
 .sale-detail-muted { font-size: 11px; }
 .sale-detail .detail-grid { margin-top: 2px; }
 .sale-detail .ledger-row b { font-size: 12px !important; }
+
+/* Dokumen invoice (Fase 6): layout kertas + aturan print */
+.invoice-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 16px; }
+.invoice-doc { display: grid; gap: 18px; padding: 32px; background: white; color: #111827; border-radius: 14px; border: 1px solid hsl(222 13% 91%); }
+.invoice-doc h1, .invoice-doc h2, .invoice-doc h3 { color: #111827; }
+.invoice-head { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; }
+.invoice-brand { display: flex; align-items: center; gap: 14px; }
+.invoice-logo { width: 58px; height: 58px; object-fit: contain; border-radius: 10px; border: 1px solid #e5e7eb; background: #f9fafb; }
+.invoice-issuer strong { font-size: 14px; display: block; }
+.invoice-issuer span { font-size: 11px; color: #6b7280; white-space: pre-line; }
+.invoice-title h2 { font-size: 26px; letter-spacing: 2px; }
+.invoice-title small { color: #6b7280; font-size: 11px; display: block; text-align: right; }
+.invoice-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.invoice-party span, .invoice-section-title { font-size: 10px; font-weight: 800; letter-spacing: 1px; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: 6px; }
+.invoice-party strong { font-size: 13px; }
+.invoice-party p { font-size: 11px; color: #4b5563; margin: 4px 0 0; white-space: pre-line; }
+.invoice-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.invoice-table th { text-align: left; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #6b7280; border-bottom: 2px solid #111827; padding: 8px 6px; }
+.invoice-table td { padding: 9px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+.invoice-table .right { text-align: right; }
+.invoice-table tfoot td { border-bottom: 0; padding-top: 10px; font-weight: 700; }
+.invoice-table tfoot .grand td { border-top: 2px solid #111827; font-size: 14px; }
+.invoice-section p { font-size: 11px; color: #374151; white-space: pre-line; margin: 0; }
+.invoice-notes { font-size: 10px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 10px; white-space: pre-line; }
+.invoice-editor-list { display: grid; gap: 8px; grid-column: 1 / -1; }
+.invoice-editor-row { display: grid; grid-template-columns: minmax(0, 2fr) 74px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.invoice-editor-row input { width: 100%; min-height: 36px; background: hsl(var(--background) / .66); border: 1px solid hsl(var(--input) / .9); border-radius: 8px; padding: 7px 9px; font-size: 11px; }
+.invoice-editor-row .mono { font-size: 10px; color: hsl(var(--muted-foreground)); }
+.invoice-editor-head { display: grid; grid-template-columns: minmax(0, 2fr) 74px minmax(0, 1fr) auto; gap: 8px; font-size: 9px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+.invoice-logo-picker { display: flex; align-items: center; gap: 10px; }
+
+@media print {
+  @page { margin: 14mm; }
+  body { background: white !important; }
+  .sidebar, .topbar, .invoice-actions, .page-title, .no-print { display: none !important; }
+  .content { padding: 0 !important; }
+  .invoice-doc { border: 0; border-radius: 0; padding: 0; }
+}
 .marketplace-button { width: 100%; border: 0; background: transparent; text-align: left; cursor: pointer; font: inherit; color: inherit; border-radius: 8px; }
 .marketplace-button:hover { background: hsl(var(--secondary)); }
 .daily-bars { display: flex; align-items: flex-end; gap: 4px; height: 190px; padding-top: 8px; overflow-x: auto; }

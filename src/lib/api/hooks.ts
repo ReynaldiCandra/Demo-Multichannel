@@ -12,6 +12,8 @@ import type {
   DashboardSummary,
   AppModule,
   Host,
+  InvoiceDetail,
+  InvoiceRow,
   JobDetail,
   JobSummary,
   LedgerMonth,
@@ -91,7 +93,7 @@ async function compressProductImage(file: File): Promise<Blob> {
 
 export async function uploadImage(
   file: File,
-  kind: 'product' | 'supplier' | 'sale',
+  kind: 'product' | 'supplier' | 'sale' | 'invoice',
 ): Promise<{ url: string }> {
   const compressed = await compressProductImage(file);
   const formData = new FormData();
@@ -178,6 +180,55 @@ export function useUpdateSettlement(options?: MutationOpts<unknown, { storeId: s
     ({ storeId, month, data }) =>
       request<unknown>(`/settlements/${storeId}`, { method: 'PATCH', params: { month }, body: data }),
     ['settlements'],
+    options,
+  );
+}
+
+/* ------------------------------- invoices ------------------------------- */
+
+export const getListInvoicesQueryKey = () => ['invoices'] as const;
+export const getGetInvoiceQueryKey = (invoiceId: string) => ['invoices', invoiceId] as const;
+
+/** Daftar ringkas invoice custom (Fase 6). */
+export function useListInvoices() {
+  return useQuery({
+    queryKey: getListInvoicesQueryKey(),
+    queryFn: ({ signal }) => request<InvoiceRow[]>('/invoices', { signal }),
+  });
+}
+
+/** Detail invoice + item + pembayaran untuk halaman cetak. */
+export function useGetInvoice(invoiceId: string) {
+  return useQuery({
+    queryKey: getGetInvoiceQueryKey(invoiceId),
+    queryFn: ({ signal }) => request<InvoiceDetail>(`/invoices/${invoiceId}`, { signal }),
+    enabled: Boolean(invoiceId),
+  });
+}
+
+export function useCreateInvoice(options?: MutationOpts<unknown, { data: unknown }>) {
+  return useInvalidating(
+    ({ data }) => request<unknown>('/invoices', { method: 'POST', body: data }),
+    ['invoices'],
+    options,
+  );
+}
+
+export function useUpdateInvoice(
+  options?: MutationOpts<unknown, { invoiceId: string; data: unknown }>,
+) {
+  return useInvalidating(
+    ({ invoiceId, data }) =>
+      request<unknown>(`/invoices/${invoiceId}`, { method: 'PATCH', body: data }),
+    ['invoices'],
+    options,
+  );
+}
+
+export function useDeleteInvoice(options?: MutationOpts<unknown, { invoiceId: string }>) {
+  return useInvalidating(
+    ({ invoiceId }) => request<unknown>(`/invoices/${invoiceId}`, { method: 'DELETE' }),
+    ['invoices'],
     options,
   );
 }

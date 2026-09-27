@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-const ALLOWED_KINDS = new Set(['product', 'supplier', 'sale']);
+const ALLOWED_KINDS = new Set(['product', 'supplier', 'sale', 'invoice']);
 
 export const POST = handler(async (request: Request) => {
   const denied = await requireWriteAccess();

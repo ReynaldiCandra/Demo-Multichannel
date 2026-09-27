@@ -136,6 +136,41 @@ export const SettlementInput = z.object({
   releasedDate: optionalDateString,
 });
 
+const invoiceItemInput = z.object({
+  id: z.string().uuid().nullable().optional(),
+  description: z.string().trim().min(1, 'Deskripsi item wajib diisi').max(300),
+  // Qty boleh desimal (2.5 m²); server menyimpan numeric(12,2).
+  qty: z.coerce.number().min(0.01).max(9999999999.99).default(1),
+  unitPrice: z.coerce.number().int().min(0).default(0),
+});
+
+export const InvoiceInput = z.object({
+  invoiceNumber: z.string().trim().min(1, 'Nomor invoice wajib diisi').max(64),
+  title: z.string().trim().min(1).max(120).default('Invoice'),
+  clientName: z.string().trim().min(1, 'Nama klien wajib diisi').max(120),
+  clientAddress: nullableText,
+  issuerName: nullableText,
+  issuerAddress: nullableText,
+  issueDate: dateString,
+  dueDate: optionalDateString,
+  description: nullableText,
+  scopeText: nullableText,
+  logoUrl: z.string().url('URL logo tidak valid').nullable().optional(),
+  notes: nullableText,
+  items: z.array(invoiceItemInput).min(1, 'Minimal satu item'),
+  // Tanggal + nominal + label bebas: DP, cicilan, pelunasan, dst.
+  payments: z
+    .array(
+      z.object({
+        id: z.string().uuid().nullable().optional(),
+        paidAt: dateString,
+        amount: z.coerce.number().int().min(0),
+        label: nullableText,
+      }),
+    )
+    .default([]),
+});
+
 export const ModuleUpdateInput = z.object({
   isEnabled: z.boolean(),
 });

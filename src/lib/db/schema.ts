@@ -171,6 +171,60 @@ export const settlementsTable = pgTable(
   ],
 );
 
+/**
+ * Fase 6: invoice custom — dokumen bebas dengan item & pembayaran sendiri.
+ * Status lunas tidak disimpan; diturunkan dari total pembayaran vs total item.
+ */
+export const invoicesTable = pgTable('invoices', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  invoiceNumber: text('invoice_number').notNull(),
+  title: text('title').notNull().default('Invoice'),
+  clientName: text('client_name').notNull(),
+  clientAddress: text('client_address'),
+  issuerName: text('issuer_name'),
+  issuerAddress: text('issuer_address'),
+  issueDate: date('issue_date', { mode: 'string' }).notNull(),
+  dueDate: date('due_date', { mode: 'string' }),
+  description: text('description'),
+  scopeText: text('scope_text'),
+  logoUrl: text('logo_url'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [unique('invoices_invoice_number_unique').on(table.invoiceNumber)]);
+
+export const invoiceItemsTable = pgTable(
+  'invoice_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    invoiceId: uuid('invoice_id')
+      .notNull()
+      .references(() => invoicesTable.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull().default(0),
+    description: text('description').notNull(),
+    // Qty boleh desimal (2.5 m², 3.5 meter) — numeric di DB, number di API.
+    qty: numeric('qty', { precision: 12, scale: 2 }).notNull().default('1'),
+    unitPrice: integer('unit_price').notNull().default(0),
+  },
+  (table) => [index('invoice_items_invoice_id_idx').on(table.invoiceId, table.position)],
+);
+
+export const invoicePaymentsTable = pgTable(
+  'invoice_payments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    invoiceId: uuid('invoice_id')
+      .notNull()
+      .references(() => invoicesTable.id, { onDelete: 'cascade' }),
+    paidAt: date('paid_at', { mode: 'string' }).notNull(),
+    amount: integer('amount').notNull(),
+    // Bebas: "DP", "Cicilan 1", "Pelunasan", dst.
+    label: text('label'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('invoice_payments_invoice_id_idx').on(table.invoiceId, table.paidAt)],
+);
+
 export const hostsTable = pgTable('hosts', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
@@ -208,6 +262,9 @@ export type JobPayment = typeof jobPaymentsTable.$inferSelect;
 export type Host = typeof hostsTable.$inferSelect;
 export type Supplier = typeof suppliersTable.$inferSelect;
 export type Settlement = typeof settlementsTable.$inferSelect;
+export type Invoice = typeof invoicesTable.$inferSelect;
+export type InvoiceItem = typeof invoiceItemsTable.$inferSelect;
+export type InvoicePayment = typeof invoicePaymentsTable.$inferSelect;
 export type LiveSession = typeof liveSessionsTable.$inferSelect;
 
 /**
