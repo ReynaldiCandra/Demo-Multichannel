@@ -12,7 +12,17 @@ import {
 } from '@/lib/api/hooks';
 import type { ProductRow, SaleRow, SaleStatus } from '@/lib/api/types';
 import { autoPlatformFee } from '@/lib/fees';
-import { Badge, Button, Field, ImagePreviewButton, Modal, Panel, State } from '@/components/ui';
+import {
+  Badge,
+  Button,
+  ConfirmDialog,
+  Field,
+  ImagePreviewButton,
+  Modal,
+  Panel,
+  State,
+  type ConfirmRequest,
+} from '@/components/ui';
 import { cn, dateLabel, money, number, today, waLink } from '@/lib/format';
 
 export const STATUS_LABEL: Record<SaleStatus, string> = {
@@ -382,10 +392,13 @@ export function SalesTable({
   total: number;
   onEdit: (sale: SaleRow) => void;
   onStatus: (sale: SaleRow, status: SaleStatus) => void;
-  onDelete: (sale: SaleRow) => void;
+  /** Panggil confirm({ message, onConfirm }) untuk konfirmasi via dialog in-app. */
+  onDelete: (sale: SaleRow, confirm: (request: ConfirmRequest) => void) => void;
   /** Kalau tidak diberikan, tombol detail tidak dirender (dipakai Input Harian). */
   onDetail?: (sale: SaleRow) => void;
 }) {
+  // Ditaruh sebelum early return supaya urutan hook selalu stabil.
+  const [confirming, setConfirming] = useState<ConfirmRequest | null>(null);
   if (!total) return <State type="empty" />;
 
   return (
@@ -466,7 +479,7 @@ export function SalesTable({
                       </button>
                       <button
                         className="icon-btn danger-icon"
-                        onClick={() => onDelete(sale)}
+                        onClick={() => onDelete(sale, setConfirming)}
                         aria-label="Hapus transaksi"
                         data-testid={`button-delete-sale-${sale.id}`}
                       >
@@ -480,6 +493,17 @@ export function SalesTable({
           </tbody>
         </table>
       </div>
+
+      {confirming && (
+        <ConfirmDialog
+          message={confirming.message}
+          onClose={() => setConfirming(null)}
+          onConfirm={() => {
+            confirming.onConfirm();
+            setConfirming(null);
+          }}
+        />
+      )}
     </>
   );
 }

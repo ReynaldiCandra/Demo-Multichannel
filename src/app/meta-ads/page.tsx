@@ -9,7 +9,7 @@ import {
   useUpdateMetaAdTest,
 } from '@/lib/api/hooks';
 import type { MetaAdTestRow } from '@/lib/api/types';
-import { Badge, Button, Field, Modal, Panel, PageTitle, Pagination, State } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, Field, Modal, Panel, PageTitle, Pagination, State, type ConfirmRequest } from '@/components/ui';
 import { dateLabel, money, number } from '@/lib/format';
 
 const PAGE_SIZE = 10;
@@ -19,6 +19,7 @@ export default function MetaAdsPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<MetaAdTestRow | null>(null);
   const [page, setPage] = useState(1);
+  const [confirming, setConfirming] = useState<ConfirmRequest | null>(null);
 
   const close = () => {
     setOpen(false);
@@ -150,11 +151,12 @@ export default function MetaAdsPage() {
                           </button>
                           <button
                             className="icon-btn danger-icon"
-                            onClick={() => {
-                              if (window.confirm(`Hapus tes "${item.productName}"?`)) {
-                                remove.mutate({ metaAdTestId: item.id });
-                              }
-                            }}
+                            onClick={() =>
+                              setConfirming({
+                                message: `Hapus tes "${item.productName}"?`,
+                                onConfirm: () => remove.mutate({ metaAdTestId: item.id }),
+                              })
+                            }
                             aria-label="Hapus tes"
                             data-testid={`button-delete-meta-${item.id}`}
                           >
@@ -246,6 +248,17 @@ export default function MetaAdsPage() {
             </div>
           </form>
         </Modal>
+      )}
+
+      {confirming && (
+        <ConfirmDialog
+          message={confirming.message}
+          onClose={() => setConfirming(null)}
+          onConfirm={() => {
+            confirming.onConfirm();
+            setConfirming(null);
+          }}
+        />
       )}
     </>
   );

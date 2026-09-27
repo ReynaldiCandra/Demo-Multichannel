@@ -10,6 +10,7 @@ import {
 } from '@/lib/api/hooks';
 import type { SaleRow, SaleStatus } from '@/lib/api/types';
 import { Button, Panel, PageTitle, Pagination, State } from '@/components/ui';
+import type { ConfirmRequest } from '@/components/ui';
 import { cn, dateLabel, monthNow, number } from '@/lib/format';
 import { PAGE_SIZE, STATUS_LABEL, SaleFormModal, SalesTable } from './_shared';
 
@@ -133,15 +134,12 @@ export default function PosPage() {
               onStatus={(sale, status) =>
                 update.mutate({ saleId: sale.id, data: { status } })
               }
-              onDelete={(sale) => {
-                if (
-                  window.confirm(
-                    `Hapus transaksi ${sale.productName} tanggal ${dateLabel(sale.date)}? Kalau pesanan dibatalkan atau diretur, lebih baik ubah statusnya saja supaya jejaknya tetap ada.`,
-                  )
-                ) {
-                  remove.mutate({ saleId: sale.id });
-                }
-              }}
+              onDelete={(sale, confirm) =>
+                confirm({
+                  message: `Hapus transaksi ${sale.productName} tanggal ${dateLabel(sale.date)}? Kalau pesanan dibatalkan atau diretur, lebih baik ubah statusnya saja supaya jejaknya tetap ada.`,
+                  onConfirm: () => remove.mutate({ saleId: sale.id }),
+                })
+              }
             />
             <Pagination
               page={page}

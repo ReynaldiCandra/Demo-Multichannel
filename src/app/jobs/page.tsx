@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ChevronRight, CircleAlert, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useCreateJob, useDeleteJob, useListJobs, useUpdateJob } from '@/lib/api/hooks';
 import type { JobSummary } from '@/lib/api/types';
-import { Badge, Button, Field, Modal, Panel, PageTitle, Pagination, State } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, Field, Modal, Panel, PageTitle, Pagination, State, type ConfirmRequest } from '@/components/ui';
 import { cn, dateLabel, money, number, today } from '@/lib/format';
 
 const PAGE_SIZE = 10;
@@ -15,6 +15,7 @@ export default function JobsPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<JobSummary | null>(null);
   const [page, setPage] = useState(1);
+  const [confirming, setConfirming] = useState<ConfirmRequest | null>(null);
   const close = () => {
     setOpen(false);
     setEditing(null);
@@ -181,16 +182,12 @@ export default function JobsPage() {
                           <Pencil size={15} />
                         </button>
                         <button
-                          className="icon-btn danger-icon"
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                `Hapus job "${job.clientName}"? Semua biaya dan pembayaran job ikut dihapus.`,
-                              )
-                            ) {
-                              remove.mutate({ jobId: job.id });
-                            }
-                          }}
+                          className="icon-btn danger-icon"                            onClick={() =>
+                            setConfirming({
+                              message: `Hapus job "${job.clientName}"? Semua biaya dan pembayaran job ikut dihapus.`,
+                              onConfirm: () => remove.mutate({ jobId: job.id }),
+                            })
+                          }
                           aria-label="Hapus job"
                           data-testid={`button-delete-job-${job.id}`}
                         >
@@ -272,6 +269,17 @@ export default function JobsPage() {
             </div>
           </form>
         </Modal>
+      )}
+
+      {confirming && (
+        <ConfirmDialog
+          message={confirming.message}
+          onClose={() => setConfirming(null)}
+          onConfirm={() => {
+            confirming.onConfirm();
+            setConfirming(null);
+          }}
+        />
       )}
     </>
   );

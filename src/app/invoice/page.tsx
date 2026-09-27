@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { FileText, Pencil, Plus, Printer, Trash2 } from 'lucide-react';
 import { useDeleteInvoice, useListInvoices } from '@/lib/api/hooks';
 import type { InvoiceRow } from '@/lib/api/types';
-import { Badge, Button, Panel, PageTitle, Pagination, State } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, Panel, PageTitle, Pagination, State, type ConfirmRequest } from '@/components/ui';
 import { cn, dateLabel, money, number } from '@/lib/format';
 import { InvoiceFormModal } from './_editor';
 
@@ -16,6 +16,7 @@ export default function InvoicePage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [confirming, setConfirming] = useState<ConfirmRequest | null>(null);
 
   const rows = invoices.data ?? [];
   const totals = useMemo(
@@ -86,15 +87,12 @@ export default function InvoicePage() {
                       setEditingId(invoice.id);
                       setEditorOpen(true);
                     }}
-                    onDelete={() => {
-                      if (
-                        window.confirm(
-                          `Hapus invoice ${invoice.invoiceNumber} untuk ${invoice.clientName}? Item dan riwayat pembayaran ikut terhapus.`,
-                        )
-                      ) {
-                        remove.mutate({ invoiceId: invoice.id });
-                      }
-                    }}
+                    onDelete={() =>
+                      setConfirming({
+                        message: `Hapus invoice ${invoice.invoiceNumber} untuk ${invoice.clientName}? Item dan riwayat pembayaran ikut terhapus.`,
+                        onConfirm: () => remove.mutate({ invoiceId: invoice.id }),
+                      })
+                    }
                   />
                 ))}
               </tbody>
@@ -116,6 +114,17 @@ export default function InvoicePage() {
           onSaved={(savedId) => {
             closeEditor();
             window.open(`/invoice/${savedId}`, '_blank');
+          }}
+        />
+      )}
+
+      {confirming && (
+        <ConfirmDialog
+          message={confirming.message}
+          onClose={() => setConfirming(null)}
+          onConfirm={() => {
+            confirming.onConfirm();
+            setConfirming(null);
           }}
         />
       )}

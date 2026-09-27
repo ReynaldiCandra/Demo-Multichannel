@@ -17,6 +17,7 @@ import type { SettlementRow } from '@/lib/api/types';
 import {
   Badge,
   Button,
+  ConfirmDialog,
   Field,
   KpiCard,
   Modal,
@@ -24,6 +25,7 @@ import {
   PageTitle,
   Pagination,
   State,
+  type ConfirmRequest,
 } from '@/components/ui';
 import { cn, dateLabel, money, monthLabel, monthNow, monthValue, number, today } from '@/lib/format';
 
@@ -209,6 +211,7 @@ function SettlementView({ month }: { month: string }) {
   const settlements = useListSettlements(month);
   const update = useUpdateSettlement();
   const [releasing, setReleasing] = useState<SettlementRow | null>(null);
+  const [confirming, setConfirming] = useState<ConfirmRequest | null>(null);
 
   const rows = settlements.data ?? [];
 
@@ -230,13 +233,10 @@ function SettlementView({ month }: { month: string }) {
   }, [rows]);
 
   const markPending = (row: SettlementRow) => {
-    if (
-      window.confirm(
-        `Batalkan status cair untuk ${row.storeName} (${monthLabel(month)})? Angkanya kembali dihitung dari data dashboard.`,
-      )
-    ) {
-      update.mutate({ storeId: row.storeId, month, data: { status: 'pending' } });
-    }
+    setConfirming({
+      message: `Batalkan status cair untuk ${row.storeName} (${monthLabel(month)})? Angkanya kembali dihitung dari data dashboard.`,
+      onConfirm: () => update.mutate({ storeId: row.storeId, month, data: { status: 'pending' } }),
+    });
   };
 
   return (
@@ -349,6 +349,19 @@ function SettlementView({ month }: { month: string }) {
             )
           }
           pending={update.isPending}
+        />
+      )}
+
+      {confirming && (
+        <ConfirmDialog
+          title="Batalkan status cair"
+          confirmLabel="Batalkan status"
+          message={confirming.message}
+          onClose={() => setConfirming(null)}
+          onConfirm={() => {
+            confirming.onConfirm();
+            setConfirming(null);
+          }}
         />
       )}
     </>

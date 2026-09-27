@@ -14,7 +14,7 @@ import {
   useUpdateLiveSession,
 } from '@/lib/api/hooks';
 import type { Host, LiveSessionRow } from '@/lib/api/types';
-import { Badge, Button, Field, Modal, Panel, PageTitle, Pagination, State } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, Field, Modal, Panel, PageTitle, Pagination, State, type ConfirmRequest } from '@/components/ui';
 import { dateLabel, money, monthLabel, monthNow, number, today } from '@/lib/format';
 
 const PAGE_SIZE = 10;
@@ -29,6 +29,7 @@ export default function LivePage() {
   const [editingSession, setEditingSession] = useState<LiveSessionRow | null>(null);
   const [hostPage, setHostPage] = useState(1);
   const [sessionPage, setSessionPage] = useState(1);
+  const [confirming, setConfirming] = useState<ConfirmRequest | null>(null);
   const close = () => {
     setModal(null);
     setEditingHost(null);
@@ -167,11 +168,12 @@ export default function LivePage() {
                     </button>
                     <button
                       className="icon-btn danger-icon"
-                      onClick={() => {
-                        if (window.confirm(`Hapus host "${host.name}"?`)) {
-                          deleteHost.mutate({ hostId: host.id });
-                        }
-                      }}
+                      onClick={() =>
+                        setConfirming({
+                          message: `Hapus host "${host.name}"?`,
+                          onConfirm: () => deleteHost.mutate({ hostId: host.id }),
+                        })
+                      }
                       aria-label="Hapus host"
                       data-testid={`button-delete-host-${host.id}`}
                     >
@@ -250,12 +252,12 @@ export default function LivePage() {
                             <Pencil size={15} />
                           </button>
                           <button
-                            className="icon-btn danger-icon"
-                            onClick={() => {
-                              if (window.confirm(`Hapus sesi live ${dateLabel(item.date)}?`)) {
-                                deleteSession.mutate({ liveSessionId: item.id });
-                              }
-                            }}
+                            className="icon-btn danger-icon"                              onClick={() =>
+                              setConfirming({
+                                message: `Hapus sesi live ${dateLabel(item.date)}?`,
+                                onConfirm: () => deleteSession.mutate({ liveSessionId: item.id }),
+                              })
+                            }
                             aria-label="Hapus sesi"
                             data-testid={`button-delete-session-${item.id}`}
                           >
@@ -382,6 +384,17 @@ export default function LivePage() {
             </div>
           </form>
         </Modal>
+      )}
+
+      {confirming && (
+        <ConfirmDialog
+          message={confirming.message}
+          onClose={() => setConfirming(null)}
+          onConfirm={() => {
+            confirming.onConfirm();
+            setConfirming(null);
+          }}
+        />
       )}
     </>
   );

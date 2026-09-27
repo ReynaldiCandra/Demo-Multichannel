@@ -686,6 +686,10 @@ h2 { font: 700 16px/1.2 var(--app-font-serif); letter-spacing: -.02em; }
 .invoice-editor-head { display: grid; grid-template-columns: minmax(0, 2fr) 74px minmax(0, 1fr) auto; gap: 8px; font-size: 9px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
 .invoice-logo-picker { display: flex; align-items: center; gap: 10px; }
 
+/* Dialog konfirmasi (Fase 7) */
+.confirm-dialog { display: grid; gap: 16px; }
+.confirm-dialog p { margin: 0; font-size: 12px; line-height: 1.6; }
+
 @media print {
   @page { margin: 14mm; }
   body { background: white !important; }

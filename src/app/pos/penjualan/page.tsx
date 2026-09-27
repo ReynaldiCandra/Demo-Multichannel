@@ -201,15 +201,12 @@ export default function PenjualanPage() {
               onStatus={(sale, status) =>
                 update.mutate({ saleId: sale.id, data: { status } })
               }
-              onDelete={(sale) => {
-                if (
-                  window.confirm(
-                    `Hapus transaksi ${sale.productName} tanggal ${dateLabel(sale.date)}? Kalau pesanan dibatalkan atau diretur, lebih baik ubah statusnya saja supaya jejaknya tetap ada.`,
-                  )
-                ) {
-                  remove.mutate({ saleId: sale.id });
-                }
-              }}
+              onDelete={(sale, confirm) =>
+                confirm({
+                  message: `Hapus transaksi ${sale.productName} tanggal ${dateLabel(sale.date)}? Kalau pesanan dibatalkan atau diretur, lebih baik ubah statusnya saja supaya jejaknya tetap ada.`,
+                  onConfirm: () => remove.mutate({ saleId: sale.id }),
+                })
+              }
             />
             <Pagination
               page={page}

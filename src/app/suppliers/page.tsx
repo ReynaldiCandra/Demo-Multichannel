@@ -5,7 +5,7 @@ import { MessageCircle, Pencil, Plus, Power, Trash2, Truck } from 'lucide-react'
 import { toast } from 'sonner';
 import { uploadImage, useCreateSupplier, useDeleteSupplier, useListSuppliers, useUpdateSupplier } from '@/lib/api/hooks';
 import type { Supplier } from '@/lib/api/types';
-import { Badge, Button, Field, ImagePreviewButton, Modal, Panel, PageTitle, Pagination, State } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, Field, ImagePreviewButton, Modal, Panel, PageTitle, Pagination, State, type ConfirmRequest } from '@/components/ui';
 import { money, number, waLink } from '@/lib/format';
 
 const PAGE_SIZE = 10;
@@ -16,6 +16,7 @@ export default function SuppliersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [page, setPage] = useState(1);
+  const [confirming, setConfirming] = useState<ConfirmRequest | null>(null);
   const close = () => {
     setModalOpen(false);
     setEditing(null);
@@ -184,11 +185,12 @@ export default function SuppliersPage() {
                           </button>
                           <button
                             className="icon-btn danger-icon"
-                            onClick={() => {
-                              if (window.confirm(`Hapus suplier "${supplier.name}"?`)) {
-                                deleteSupplier.mutate({ supplierId: supplier.id });
-                              }
-                            }}
+                            onClick={() =>
+                              setConfirming({
+                                message: `Hapus suplier "${supplier.name}"?`,
+                                onConfirm: () => deleteSupplier.mutate({ supplierId: supplier.id }),
+                              })
+                            }
                             aria-label="Hapus suplier"
                             data-testid={`button-delete-supplier-${supplier.id}`}
                           >
@@ -264,6 +266,17 @@ export default function SuppliersPage() {
             </div>
           </form>
         </Modal>
+      )}
+
+      {confirming && (
+        <ConfirmDialog
+          message={confirming.message}
+          onClose={() => setConfirming(null)}
+          onConfirm={() => {
+            confirming.onConfirm();
+            setConfirming(null);
+          }}
+        />
       )}
     </>
   );

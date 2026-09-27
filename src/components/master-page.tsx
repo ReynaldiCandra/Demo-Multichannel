@@ -16,7 +16,7 @@ import {
   uploadProductImage,
 } from '@/lib/api/hooks';
 import type { ProductRow, StoreRow } from '@/lib/api/types';
-import { Badge, Button, Field, ImagePreviewButton, Modal, Panel, PageTitle, Pagination, State } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, Field, ImagePreviewButton, Modal, Panel, PageTitle, Pagination, State, type ConfirmRequest } from '@/components/ui';
 import { money, number } from '@/lib/format';
 
 type Editing = ProductRow | StoreRow | null;
@@ -38,6 +38,7 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Editing>(null);
   const [productSort, setProductSort] = useState<ProductSort>('name');
+  const [confirming, setConfirming] = useState<ConfirmRequest | null>(null);
   const [productStatus, setProductStatus] = useState<'all' | 'active' | 'archived'>('all');
   const [channelFilter, setChannelFilter] = useState('all');
   const [selectedMarketplace, setSelectedMarketplace] = useState('');
@@ -185,12 +186,13 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
       window.alert('Toko memiliki transaksi dan tidak bisa dihapus. Gunakan Arsipkan agar riwayat tetap aman.');
       return;
     }
-    if (!window.confirm(`Hapus ${label} "${isProducts ? (item as ProductRow).name : (item as StoreRow).name}"?`)) {
-      return;
-    }
-
-    if (isProducts) deleteProduct.mutate({ productId: item.id });
-    else deleteStore.mutate({ storeId: item.id });
+    setConfirming({
+      message: `Hapus ${label} "${isProducts ? (item as ProductRow).name : (item as StoreRow).name}"?`,
+      onConfirm: () => {
+        if (isProducts) deleteProduct.mutate({ productId: item.id });
+        else deleteStore.mutate({ storeId: item.id });
+      },
+    });
   };
 
   const openNewStore = (kindToCreate: NewStoreKind) => {
@@ -631,6 +633,13 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
             </div>
           </form>
         </Modal>
+      )}
+
+      {confirming && (
+        <ConfirmDialog message={confirming.message} onClose={() => setConfirming(null)} onConfirm={() => {
+          confirming.onConfirm();
+          setConfirming(null);
+        }} />
       )}
 
       {newStoreOpen && (

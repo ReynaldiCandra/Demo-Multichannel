@@ -138,6 +138,59 @@ export function Modal({
   );
 }
 
+/** Permintaan konfirmasi yang dirender ConfirmDialog (mis. dari tabel). */
+export type ConfirmRequest = {
+  message: string;
+  onConfirm: () => void;
+};
+
+/**
+ * Dialog konfirmasi in-app menggantikan window.confirm() (Fase 7):
+ * bergaya sama dengan modal lain, fokus keyboard tetap di UI, dan aman
+ * dipakai berulang lewat props message + onConfirm.
+ */
+export function ConfirmDialog({
+  title = 'Konfirmasi',
+  message,
+  confirmLabel = 'Hapus',
+  cancelLabel = 'Batal',
+  danger = true,
+  pending = false,
+  onConfirm,
+  onClose,
+}: {
+  title?: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  danger?: boolean;
+  pending?: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal title={title} onClose={onClose}>
+      <div className="confirm-dialog">
+        <p>{message}</p>
+        <div className="form-actions">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
+            {cancelLabel}
+          </Button>
+          <Button
+            type="button"
+            variant={danger ? 'danger' : 'primary'}
+            onClick={onConfirm}
+            disabled={pending}
+            data-testid="button-confirm-dialog"
+          >
+            {confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function ImagePreviewButton({
   src,
   alt,
