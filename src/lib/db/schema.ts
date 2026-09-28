@@ -293,6 +293,59 @@ export type Task = typeof tasksTable.$inferSelect;
 export type LiveSession = typeof liveSessionsTable.$inferSelect;
 
 /**
+ * CRM Leads: client (pemilik kampanye) → produk iklan → leads (orang).
+ * Kategori lead = pipeline: hot | warm | closing | follow_up.
+ */
+export const crmClientsTable = pgTable('crm_clients', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  category: text('category'),
+  contactName: text('contact_name'),
+  phone: text('phone'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index('crm_clients_name_idx').on(table.name)]);
+
+export const crmProductsTable = pgTable('crm_products', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  clientId: uuid('client_id')
+    .notNull()
+    .references(() => crmClientsTable.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  price: integer('price').notNull().default(0),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index('crm_products_client_id_idx').on(table.clientId)]);
+
+export const crmLeadsTable = pgTable('crm_leads', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  clientId: uuid('client_id')
+    .notNull()
+    .references(() => crmClientsTable.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id')
+    .references(() => crmProductsTable.id, { onDelete: 'set null' }),
+  name: text('name').notNull(),
+  phone: text('phone'),
+  region: text('region'),
+  source: text('source').notNull().default('meta'),
+  category: text('category').notNull().default('follow_up'),
+  notes: text('notes'),
+  followUpAt: date('follow_up_at', { mode: 'string' }),
+  closedAt: timestamp('closed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('crm_leads_client_id_idx').on(table.clientId),
+  index('crm_leads_category_idx').on(table.category),
+  index('crm_leads_follow_up_idx').on(table.followUpAt),
+]);
+
+export type CrmClient = typeof crmClientsTable.$inferSelect;
+export type CrmProduct = typeof crmProductsTable.$inferSelect;
+export type CrmLead = typeof crmLeadsTable.$inferSelect;
+
+/**
  * Akun login. `role` menentukan hak akses:
  *  - owner : akses penuh
  *  - demo  : hanya baca, semua aksi tulis ditolak di server

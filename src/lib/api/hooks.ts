@@ -28,6 +28,10 @@ import type {
   TaskRow,
   StoreRow,
   Supplier,
+  CrmAlertsResponse,
+  CrmClientRow,
+  CrmLeadsResponse,
+  CrmProductRow,
 } from './types';
 
 /* ------------------------------------------------------------------ */
@@ -672,6 +676,124 @@ export function useUpdateLiveSession(
   );
 }
 
+
+/* ------------------------------------------------------------------ */
+/* CRM Leads                                                           */
+/* ------------------------------------------------------------------ */
+
+export const getListCrmClientsQueryKey = () => ['crm-clients'] as const;
+export const getListCrmProductsQueryKey = (params?: { clientId?: string }) =>
+  ['crm-products', params ?? {}] as const;
+export const getListCrmLeadsQueryKey = (params?: Record<string, unknown>) =>
+  ['crm-leads', params ?? {}] as const;
+export const getCrmAlertsQueryKey = () => ['crm-alerts'] as const;
+
+export function useListCrmClients() {
+  return useQuery({
+    queryKey: getListCrmClientsQueryKey(),
+    queryFn: ({ signal }) => request<CrmClientRow[]>('/crm/clients', { signal }),
+  });
+}
+
+export function useListCrmProducts(params: { clientId?: string } = {}) {
+  return useQuery({
+    queryKey: getListCrmProductsQueryKey(params),
+    queryFn: ({ signal }) => request<CrmProductRow[]>('/crm/products', { params, signal }),
+  });
+}
+
+export function useListCrmLeads(params: Record<string, unknown> = {}) {
+  return useQuery({
+    queryKey: getListCrmLeadsQueryKey(params),
+    queryFn: ({ signal }) => request<CrmLeadsResponse>('/crm/leads', { params, signal }),
+  });
+}
+
+/** Lonceng notifikasi: polling 30 detik selama dashboard terbuka. */
+export function useCrmAlerts() {
+  return useQuery({
+    queryKey: getCrmAlertsQueryKey(),
+    queryFn: ({ signal }) => request<CrmAlertsResponse>('/crm/alerts', { signal }),
+    refetchInterval: 30_000,
+  });
+}
+
+/** Invalidasi seluruh cache CRM sekaligus (leads, produk, klien, alerts). */
+function useInvalidateCrm<TVars>(
+  mutateFn: (vars: TVars) => Promise<unknown>,
+  options?: MutationOpts<unknown, TVars>,
+) {
+  return useInvalidating(mutateFn, ['crm-leads', 'crm-products', 'crm-clients', 'crm-alerts'], options);
+}
+
+export function useCreateCrmClient(options?: MutationOpts<unknown, { data: unknown }>) {
+  return useInvalidateCrm(
+    ({ data }) => request('/crm/clients', { method: 'POST', body: data }),
+    options,
+  );
+}
+
+export function useUpdateCrmClient(
+  options?: MutationOpts<unknown, { clientId: string; data: unknown }>,
+) {
+  return useInvalidateCrm(
+    ({ clientId, data }) => request(`/crm/clients/${clientId}`, { method: 'PATCH', body: data }),
+    options,
+  );
+}
+
+export function useDeleteCrmClient(options?: MutationOpts<unknown, { clientId: string }>) {
+  return useInvalidateCrm(
+    ({ clientId }) => request(`/crm/clients/${clientId}`, { method: 'DELETE' }),
+    options,
+  );
+}
+
+export function useCreateCrmProduct(options?: MutationOpts<unknown, { data: unknown }>) {
+  return useInvalidateCrm(
+    ({ data }) => request('/crm/products', { method: 'POST', body: data }),
+    options,
+  );
+}
+
+export function useUpdateCrmProduct(
+  options?: MutationOpts<unknown, { productId: string; data: unknown }>,
+) {
+  return useInvalidateCrm(
+    ({ productId, data }) => request(`/crm/products/${productId}`, { method: 'PATCH', body: data }),
+    options,
+  );
+}
+
+export function useDeleteCrmProduct(options?: MutationOpts<unknown, { productId: string }>) {
+  return useInvalidateCrm(
+    ({ productId }) => request(`/crm/products/${productId}`, { method: 'DELETE' }),
+    options,
+  );
+}
+
+export function useCreateCrmLead(options?: MutationOpts<unknown, { data: unknown }>) {
+  return useInvalidateCrm(
+    ({ data }) => request('/crm/leads', { method: 'POST', body: data }),
+    options,
+  );
+}
+
+export function useUpdateCrmLead(
+  options?: MutationOpts<unknown, { leadId: string; data: unknown }>,
+) {
+  return useInvalidateCrm(
+    ({ leadId, data }) => request(`/crm/leads/${leadId}`, { method: 'PATCH', body: data }),
+    options,
+  );
+}
+
+export function useDeleteCrmLead(options?: MutationOpts<unknown, { leadId: string }>) {
+  return useInvalidateCrm(
+    ({ leadId }) => request(`/crm/leads/${leadId}`, { method: 'DELETE' }),
+    options,
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /* sesi login                                                          */

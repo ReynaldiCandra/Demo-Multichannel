@@ -206,3 +206,61 @@ export type MetaAdTestInputType = z.infer<typeof MetaAdTestInput>;
 export type JobInputType = z.infer<typeof JobInput>;
 export type HostInputType = z.infer<typeof HostInput>;
 export type LiveSessionInputType = z.infer<typeof LiveSessionInput>;
+
+/* ------------------------------------------------------------------ */
+/* CRM Leads                                                           */
+/* ------------------------------------------------------------------ */
+
+export const CRM_LEAD_CATEGORIES = ['hot', 'warm', 'closing', 'follow_up'] as const;
+
+export const CrmClientInput = z.object({
+  name: z.string().trim().min(1, 'Nama klien wajib diisi').max(120),
+  category: nullableText,
+  contactName: nullableText,
+  phone: nullableText,
+  notes: nullableText,
+});
+
+export const CrmClientUpdateInput = CrmClientInput.partial().refine(
+  (data) => Object.keys(data).length > 0,
+  { message: 'Tidak ada perubahan yang dikirim' },
+);
+
+export const CrmProductInput = z.object({
+  clientId: z.string().uuid('Klien tidak valid'),
+  name: z.string().trim().min(1, 'Nama produk wajib diisi').max(160),
+  price: z.coerce.number().int().min(0).default(0),
+  notes: nullableText,
+});
+
+export const CrmProductUpdateInput = CrmProductInput.partial().refine(
+  (data) => Object.keys(data).length > 0,
+  { message: 'Tidak ada perubahan yang dikirim' },
+);
+
+export const CrmLeadCreateInput = z.object({
+  clientId: z.string().uuid('Klien tidak valid'),
+  productId: z.string().uuid('Produk tidak valid').nullable().optional(),
+  name: z.string().trim().min(1, 'Nama lead wajib diisi').max(120),
+  phone: nullableText,
+  region: nullableText,
+  source: z.string().trim().min(1).max(40).default('meta'),
+  category: z.enum(CRM_LEAD_CATEGORIES).default('follow_up'),
+  notes: nullableText,
+  followUpAt: optionalDateString,
+});
+
+export const CrmLeadUpdateInput = z
+  .object({
+    productId: z.string().uuid('Produk tidak valid').nullable().optional(),
+    name: z.string().trim().min(1).max(120).optional(),
+    phone: nullableText,
+    region: nullableText,
+    source: z.string().trim().min(1).max(40).optional(),
+    category: z.enum(CRM_LEAD_CATEGORIES).optional(),
+    notes: nullableText,
+    followUpAt: optionalDateString,
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'Tidak ada perubahan yang dikirim',
+  });

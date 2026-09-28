@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, type DragEvent, type FormEvent } from 'react';
-import { CalendarDays, Pencil, Plus, StickyNote, Trash2 } from 'lucide-react';
+import { CalendarDays, Eye, Pencil, Plus, StickyNote, Trash2 } from 'lucide-react';
 import {
   useCreateTask,
   useDeleteTask,
@@ -52,6 +52,8 @@ export default function KanbanPage() {
   const remove = useDeleteTask();
 
   const [editor, setEditor] = useState<EditorState>({ open: false, task: null, defaultStatus: 'todo' });
+  // Kartu yang sedang dilihat detailnya (icon mata) — isi penuh, tidak terpotong.
+  const [viewing, setViewing] = useState<TaskRow | null>(null);
   const [confirming, setConfirming] = useState<ConfirmRequest | null>(null);
   // Kartu yang sedang diseret + kolom yang sedang dilalui kursor (highlight).
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -183,6 +185,16 @@ export default function KanbanPage() {
                           <button
                             type="button"
                             className="icon-btn"
+                            onClick={() => setViewing(card)}
+                            aria-label="Lihat detail tugas"
+                            title="Lihat detail"
+                            data-testid={`button-view-task-${card.id}`}
+                          >
+                            <Eye size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="icon-btn"
                             onClick={() => setEditor({ open: true, task: card, defaultStatus: card.status })}
                             aria-label="Edit tugas"
                             data-testid={`button-edit-task-${card.id}`}
@@ -239,6 +251,17 @@ export default function KanbanPage() {
         </div>
       )}
 
+      {viewing && (
+        <TaskDetailModal
+          task={viewing}
+          onClose={() => setViewing(null)}
+          onEdit={(task) => {
+            setViewing(null);
+            setEditor({ open: true, task, defaultStatus: task.status });
+          }}
+        />
+      )}
+
       {editor.open && (
         <TaskFormModal
           task={editor.task}
@@ -263,6 +286,54 @@ export default function KanbanPage() {
         />
       )}
     </>
+  );
+}
+
+/** Modal lihat detail: isi tugas utuh (judul, prioritas, tenggat, catatan) tanpa terpotong. */
+function TaskDetailModal({
+  task,
+  onClose,
+  onEdit,
+}: {
+  task: TaskRow;
+  onClose: () => void;
+  onEdit: (task: TaskRow) => void;
+}) {
+  return (
+    <Modal title="Detail tugas" onClose={onClose}>
+      <div className="task-detail" data-testid="task-detail-modal">
+        <h3 className="task-detail-title">{task.title}</h3>
+        <div className="kanban-card-meta" style={{ marginBottom: 10 }}>
+          <Badge tone={PRIORITY_TONE[task.priority]}>{PRIORITY_LABEL[task.priority]}</Badge>
+          <Badge tone="neutral">
+            {COLUMNS.find((column) => column.status === task.status)?.label ?? task.status}
+          </Badge>
+          {task.dueDate && (
+            <span
+              className={cn(
+                'kanban-due',
+                task.status !== 'done' && task.dueDate < today() && 'overdue',
+              )}
+            >
+              <CalendarDays size={11} /> {dateLabel(task.dueDate)}
+            </span>
+          )}
+        </div>
+        {task.notes ? (
+          <p className="task-detail-notes">{task.notes}</p>
+        ) : (
+          <p className="task-detail-notes muted">Tidak ada catatan.</p>
+        )}
+        <div className="form-actions">
+          <Button variant="ghost" onClick={onClose}>
+            Tutup
+          </Button>
+          <Button onClick={() => onEdit(task)} data-testid="button-detail-edit-task">
+            <Pencil size={13} /> Edit tugas
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 

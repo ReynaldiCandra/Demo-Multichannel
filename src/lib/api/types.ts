@@ -88,6 +88,73 @@ export type MetaAdTestRow = {
   lastUpdated: string;
 };
 
+/* ------------------------------------------------------------------ */
+/* CRM Leads                                                           */
+/* ------------------------------------------------------------------ */
+
+export type CrmLeadCategory = 'hot' | 'warm' | 'closing' | 'follow_up';
+
+export type CrmClientRow = {
+  id: string;
+  name: string;
+  category: string | null;
+  contactName: string | null;
+  phone: string | null;
+  notes: string | null;
+  productCount: number;
+  leadCount: number;
+};
+
+export type CrmProductRow = {
+  id: string;
+  clientId: string;
+  clientName: string;
+  name: string;
+  price: number;
+  notes: string | null;
+};
+
+export type CrmLeadRow = {
+  id: string;
+  clientId: string;
+  clientName: string;
+  productId: string | null;
+  productName: string | null;
+  name: string;
+  phone: string | null;
+  region: string | null;
+  source: string;
+  category: CrmLeadCategory;
+  notes: string | null;
+  followUpAt: string | null;
+  closedAt: string | null;
+  createdAt: string;
+};
+
+export type CrmAlertItem = {
+  id: string;
+  title: string;
+  detail: string;
+};
+
+/** Respons GET /api/crm/leads: daftar + hitungan pipeline + daftar due. */
+export type CrmLeadsResponse = {
+  leads: CrmLeadRow[];
+  counts: Record<CrmLeadCategory, number>;
+  due: Array<{
+    id: string;
+    name: string;
+    clientName: string;
+    followUpAt: string | null;
+    category: string;
+  }>;
+};
+
+export type CrmAlertsResponse = {
+  count: number;
+  items: CrmAlertItem[];
+};
+
 export type JobSummary = {
   id: string;
   clientName: string;

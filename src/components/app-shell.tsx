@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   BarChart3,
+  Flame,
+  Bell,
   BriefcaseBusiness,
   ChevronRight,
   CircleDollarSign,
@@ -29,8 +31,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/format';
-import { useListModules, useSession } from '@/lib/api/hooks';
+import { useCrmAlerts, useListModules, useSession } from '@/lib/api/hooks';
 import { isModuleVisible } from '@/lib/modules';
+import { NotificationBell } from '@/components/notification-bell';
 
 type NavItem = {
   href: string;
@@ -82,6 +85,7 @@ const navSections: Array<{ label: string; items: NavItem[] }> = [
         activePaths: ['/pos/produk'],
         moduleKey: 'pos',
       },
+      { href: '/crm', label: 'CRM Leads', icon: Flame, moduleKey: 'crm' },
       { href: '/meta-ads', label: 'Biaya & Iklan', icon: Target, moduleKey: 'meta_ads' },
       { href: '/live', label: 'Live Selling', icon: Radio, moduleKey: 'live' },
       { href: '/suppliers', label: 'Daftar Suplier', icon: Truck },
@@ -130,6 +134,9 @@ const searchRoutes: Record<string, string> = {
   kanban: '/kanban',
   tugas: '/kanban',
   todo: '/kanban',
+  crm: '/crm',
+  lead: '/crm',
+  leads: '/crm',
   live: '/live',
   supplier: '/suppliers',
   suplier: '/suppliers',
@@ -307,6 +314,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               />
             </form>
             <div className="topbar-right">
+              <NotificationBell />
               <span className="live-pulse">
                 <i /> sinkron aktif
               </span>

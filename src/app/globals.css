@@ -855,4 +855,61 @@ h2 { font: 700 16px/1.2 var(--app-font-serif); letter-spacing: -.02em; }
 .top-product-copy strong { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .top-product-copy small, .top-product-value small { color: hsl(var(--muted-foreground)); font-size: 9px; margin-top: 3px; }
 .top-product-value { text-align: right; }
+
+/* ------------------------------------------------------------------ */
+/* Detail tugas Kanban (icon mata)                                     */
+/* ------------------------------------------------------------------ */
+.task-detail { display: grid; gap: 10px; }
+.task-detail-title { font-size: 16px; line-height: 1.4; }
+.task-detail-notes { white-space: pre-wrap; font-size: 12px; line-height: 1.6; color: hsl(var(--foreground) / .9); border: 1px solid hsl(var(--border)); border-radius: 10px; padding: 12px; background: hsl(var(--background) / .5); }
+.task-detail-notes.muted { color: hsl(var(--muted-foreground)); }
+
+/* ------------------------------------------------------------------ */
+/* CRM Leads — pipeline board, toolbar, chips                          */
+/* ------------------------------------------------------------------ */
+.crm-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.crm-toolbar select, .crm-toolbar input { border: 1px solid hsl(var(--input)); border-radius: 8px; padding: 8px 10px; background: hsl(var(--card)); color: hsl(var(--foreground)); font-size: 11px; }
+.crm-toolbar input { flex: 1 1 200px; min-width: 160px; }
+.crm-tabs { display: inline-flex; gap: 4px; margin-left: auto; border: 1px solid hsl(var(--border)); border-radius: 9px; padding: 3px; background: hsl(var(--card)); }
+.crm-tabs button { border: 0; background: transparent; color: hsl(var(--muted-foreground)); font-size: 10.5px; font-weight: 700; padding: 6px 12px; border-radius: 7px; cursor: pointer; }
+.crm-tabs button.active { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.crm-chips { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.crm-chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px; border: 1px solid hsl(var(--border)); border-radius: 999px; background: hsl(var(--card)); }
+.crm-chip b { font: 700 12px var(--app-font-mono); }
+.crm-board { display: grid; grid-template-columns: repeat(4, minmax(220px, 1fr)); gap: 12px; align-items: start; }
+@media (max-width: 1100px) { .crm-board { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .crm-board { grid-template-columns: 1fr; } }
+.crm-column { border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--card)); padding: 10px; min-height: 160px; }
+.crm-column-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 0 2px; }
+.crm-column-head h2 { font-size: 12px; letter-spacing: .02em; }
+.crm-count { font: 700 11px var(--app-font-mono); color: hsl(var(--muted-foreground)); }
+.crm-cards { display: grid; gap: 8px; }
+.crm-card { border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--background) / .6); padding: 10px; display: grid; gap: 6px; }
+.crm-card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 10px; color: hsl(var(--muted-foreground)); }
+.crm-source { font-weight: 700; font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; }
+.crm-phone { display: inline-flex; align-items: center; gap: 3px; color: hsl(var(--primary)); font-weight: 600; }
+.crm-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.crm-card-footer select { border: 1px solid hsl(var(--input)); border-radius: 7px; padding: 4px 6px; background: hsl(var(--card)); color: hsl(var(--foreground)); font-size: 10px; max-width: 140px; }
+.crm-empty-col { color: hsl(var(--muted-foreground)); font-size: 10.5px; text-align: center; padding: 14px 0; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.panel-head h2 { font-size: 14px; }
+
+/* ------------------------------------------------------------------ */
+/* Lonceng notifikasi (topbar)                                         */
+/* ------------------------------------------------------------------ */
+.bell-wrap { position: relative; }
+.bell-button { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 9px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--muted-foreground)); cursor: pointer; }
+.bell-button:hover { color: hsl(var(--foreground)); }
+.bell-active { color: hsl(var(--warning)); border-color: hsl(var(--warning) / .5); }
+.bell-badge { position: absolute; top: -5px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: hsl(4 92% 58%); color: white; font: 700 9px/16px var(--app-font-mono); text-align: center; }
+.bell-menu { position: absolute; right: 0; top: calc(100% + 8px); width: 300px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--popover)); color: hsl(var(--popover-foreground)); box-shadow: 0 18px 40px hsl(0 0% 0% / .18); z-index: 60; overflow: hidden; }
+.bell-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid hsl(var(--border)); font-size: 11px; }
+.bell-head span { color: hsl(var(--muted-foreground)); font-size: 10px; }
+.bell-list { list-style: none; margin: 0; padding: 4px; max-height: 300px; overflow-y: auto; }
+.bell-list a { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; text-decoration: none; }
+.bell-list a:hover { background: hsl(var(--accent) / .35); }
+.bell-list strong { font-size: 11px; }
+.bell-list small { color: hsl(var(--muted-foreground)); font-size: 9.5px; }
+.bell-empty { padding: 16px 14px; color: hsl(var(--muted-foreground)); font-size: 10.5px; }
+.bell-footer { display: block; padding: 9px 14px; border-top: 1px solid hsl(var(--border)); color: hsl(var(--primary)); font-size: 10.5px; font-weight: 700; text-decoration: none; }
 .top-product-value strong { font: 500 10px var(--app-font-mono); }
