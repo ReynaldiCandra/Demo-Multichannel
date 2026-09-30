@@ -6,11 +6,13 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   BarChart3,
+  CalendarClock,
   Flame,
   Bell,
   BriefcaseBusiness,
   ChevronRight,
   CircleDollarSign,
+  Handshake,
   LayoutDashboard,
   LineChart,
   Menu,
@@ -85,10 +87,39 @@ const navSections: Array<{ label: string; items: NavItem[] }> = [
         activePaths: ['/pos/produk'],
         moduleKey: 'pos',
       },
-      { href: '/crm', label: 'CRM Leads', icon: Flame, moduleKey: 'crm' },
       { href: '/meta-ads', label: 'Biaya & Iklan', icon: Target, moduleKey: 'meta_ads' },
       { href: '/live', label: 'Live Selling', icon: Radio, moduleKey: 'live' },
       { href: '/suppliers', label: 'Daftar Suplier', icon: Truck },
+    ],
+  },
+  {
+    // CRM adalah section sendiri (bukan bagian OPERASIONAL) karena punya alur
+    // kerja mandiri: pipeline leads → klien & produk → follow-up. Pemisahan
+    // halamannya mengikuti pola KEUANGAN (Settlement & Invoice terpisah).
+    label: 'CRM',
+    items: [
+      {
+        href: '/crm',
+        label: 'Pipeline Leads',
+        icon: Flame,
+        activePaths: ['/crm'],
+        exact: true,
+        moduleKey: 'crm',
+      },
+      {
+        href: '/crm/klien',
+        label: 'Klien & Produk',
+        icon: Handshake,
+        activePaths: ['/crm/klien'],
+        moduleKey: 'crm',
+      },
+      {
+        href: '/crm/follow-up',
+        label: 'Follow-up',
+        icon: CalendarClock,
+        activePaths: ['/crm/follow-up'],
+        moduleKey: 'crm',
+      },
     ],
   },
   {
@@ -137,6 +168,10 @@ const searchRoutes: Record<string, string> = {
   crm: '/crm',
   lead: '/crm',
   leads: '/crm',
+  pipeline: '/crm',
+  klien: '/crm/klien',
+  follow: '/crm/follow-up',
+  followup: '/crm/follow-up',
   live: '/live',
   supplier: '/suppliers',
   suplier: '/suppliers',

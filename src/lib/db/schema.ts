@@ -26,6 +26,8 @@ export const storesTable = pgTable(
     isActive: boolean('is_active').notNull().default(true),
     // Potongan platform dalam persen dari omzet transaksi (0 = isi manual per transaksi).
     feePercent: numeric('fee_percent', { precision: 5, scale: 2 }).notNull().default('0'),
+    /** Logo/foto brand toko — tampil di daftar toko & analisa. */
+    imageUrl: text('image_url'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -255,6 +257,8 @@ export const hostsTable = pgTable('hosts', {
   phone: text('phone'),
   commissionType: text('commission_type').notNull().default('per_hour'),
   rate: integer('rate').notNull().default(0),
+  /** Foto host — tampil di daftar host & kartu sesi live. */
+  imageUrl: text('image_url'),
   isActive: boolean('is_active').notNull().default(true),
 });
 
@@ -271,6 +275,8 @@ export const liveSessionsTable = pgTable('live_sessions', {
   endTime: time('end_time'),
   totalOrders: integer('total_orders').notNull().default(0),
   totalRevenue: integer('total_revenue').notNull().default(0),
+  /** Jumlah komentar live (engagement), diisi manual dari statistik platform. */
+  totalComments: integer('total_comments').notNull().default(0),
   commissionAmount: integer('commission_amount').notNull().default(0),
   commissionPaid: boolean('commission_paid').notNull().default(false),
   notes: text('notes'),

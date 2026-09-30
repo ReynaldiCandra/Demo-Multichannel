@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, lt, sql } from 'drizzle-orm';
 import { db, productsTable, salesTable, storesTable } from '@/lib/db';
-import { monthBounds } from './dashboard';
+import { monthBounds, periodBounds } from './dashboard';
 
 export type StorePerformanceRow = {
   storeId: string;
@@ -218,6 +218,11 @@ export type SalesReportSort = 'pcs' | 'revenue' | 'profit' | 'margin';
 export type SalesReportFilters = {
   /** Format YYYY-MM. Kosong = akumulasi seluruh waktu. */
   month?: string | null;
+  /**
+   * "YYYY-Www" (minggu ISO) | "YYYY-MM" | "YYYY" — filter mingguan/bulanan/
+   * tahunan. Kalau diisi, `period` menang atas `month`.
+   */
+  period?: string | null;
   /** Nama brand, mis. "Rise & Wars" (gabungan semua kanal). */
   brand?: string | null;
   /** Satu kanal spesifik (satu baris di tabel stores). */
@@ -250,6 +255,8 @@ export type SalesReportProduct = Metrics & {
 
 export type SalesReport = {
   month: string | null;
+  /** Periode fleksibel yang dipakai (bentuk sama seperti filter). */
+  period: string | null;
   totals: Metrics & { averageOrder: number; activeProducts: number };
   products: SalesReportProduct[];
   channels: Array<
@@ -333,7 +340,12 @@ function metrics(row: {
  */
 export async function getSalesReport(filters: SalesReportFilters = {}): Promise<SalesReport> {
   const month = filters.month || null;
-  const bounds = month ? monthBounds(month) : null;
+  // Periode mingguan/bulanan/tahunan menang atas bulan tunggal.
+  const bounds = filters.period
+    ? periodBounds(filters.period)
+    : month
+      ? monthBounds(month)
+      : null;
   const sort: SalesReportSort = filters.sort ?? 'pcs';
   const limit = Math.min(Math.max(filters.limit ?? 200, 1), 500);
 
@@ -468,6 +480,7 @@ export async function getSalesReport(filters: SalesReportFilters = {}): Promise<
 
   return {
     month,
+    period: filters.period ?? null,
     totals: {
       ...totals,
       averageOrder: totals.transactions > 0 ? Math.round(totals.revenue / totals.transactions) : 0,

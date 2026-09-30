@@ -37,6 +37,7 @@ describe('API settlement: status pencairan per toko per bulan', () => {
       '0005_product_supplier_image.sql',
       '0006_supplier_sale_image.sql',
       '0007_settlements.sql',
+      '0012_live_and_store_media.sql',
     ]) {
       await pg.exec(readFileSync(`supabase/migrations/${file}`, 'utf8'));
     }

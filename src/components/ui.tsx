@@ -195,13 +195,27 @@ export function ImagePreviewButton({
   src,
   alt,
   size = 'thumb',
+  avatar = false,
+  emptyLabel = '—',
 }: {
   src: string | null | undefined;
   alt: string;
   size?: 'thumb' | 'small';
+  /** Tampil bulat kecil (untuk logo toko / foto host), tetap bisa diklik untuk diperbesar. */
+  avatar?: boolean;
+  emptyLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
-  if (!src) return <span className={`product-thumb product-thumb-empty ${size === 'small' ? 'product-thumb-small' : ''}`}>—</span>;
+  if (!src)
+    return (
+      <span
+        className={`product-thumb product-thumb-empty ${avatar ? 'product-thumb-avatar' : ''} ${
+          size === 'small' ? 'product-thumb-small' : ''
+        }`}
+      >
+        {emptyLabel}
+      </span>
+    );
 
   return (
     <>
@@ -212,7 +226,12 @@ export function ImagePreviewButton({
         aria-label={`Lihat ${alt}`}
         title={`Lihat ${alt}`}
       >
-        <img src={src} alt={alt} className="product-thumb" loading="lazy" />
+        <img
+          src={src}
+          alt={alt}
+          className={`product-thumb ${avatar ? 'product-thumb-avatar' : ''}`}
+          loading="lazy"
+        />
         <span className="image-eye"><Eye size={13} /></span>
       </button>
       {open && (

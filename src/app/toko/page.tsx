@@ -15,7 +15,7 @@ import {
 import { useSalesReport } from '@/lib/api/hooks';
 import type { SalesReport, SalesReportSort } from '@/lib/api/types';
 import { Badge, KpiCard, PageTitle, Panel, Pagination, Skeleton, State } from '@/components/ui';
-import { cn, dateLabel, money, monthLabel, monthNow, number } from '@/lib/format';
+import { cn, dateLabel, money, monthLabel, monthNow, number, today } from '@/lib/format';
 
 const SORTS: Array<{ key: SalesReportSort; label: string }> = [
   { key: 'pcs', label: 'Terlaris (pcs)' },
@@ -24,6 +24,41 @@ const SORTS: Array<{ key: SalesReportSort; label: string }> = [
   { key: 'margin', label: 'Margin' },
 ];
 const PAGE_SIZE = 10;
+
+type PeriodMode = 'week' | 'month' | 'year';
+
+const WEEK_PATTERN = /^\d{4}-W\d{2}$/;
+const YEAR_PATTERN = /^\d{4}$/;
+
+/** ISO week string untuk tanggal: "2026-W39" (sama dengan output <input type="week">). */
+const isoWeekOf = (date: string) => {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return monthNow;
+  const target = new Date(parsed);
+  const dayNumber = (parsed.getUTCDay() + 6) % 7;
+  target.setUTCDate(parsed.getUTCDate() - dayNumber + 3);
+  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
+  const firstDayNumber = (firstThursday.getUTCDay() + 6) % 7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNumber + 3);
+  const week =
+    1 + Math.round((target.getTime() - firstThursday.getTime()) / (7 * 24 * 3600 * 1000));
+  return `${target.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+};
+
+const modeOf = (period: string): PeriodMode => {
+  if (WEEK_PATTERN.test(period)) return 'week';
+  if (YEAR_PATTERN.test(period)) return 'year';
+  return 'month';
+};
+
+const periodLabelOf = (period: string) => {
+  if (WEEK_PATTERN.test(period)) {
+    const [year, week] = period.split('-W');
+    return `Minggu ${Number(week)} / ${year}`;
+  }
+  if (YEAR_PATTERN.test(period)) return `Tahun ${period}`;
+  return monthLabel(period);
+};
 
 export default function TokoPage() {
   // useSearchParams wajib di dalam Suspense agar build produksi tidak gagal.
@@ -40,11 +75,17 @@ function TokoAnalytics() {
   const searchParams = useSearchParams();
 
   // Filter disimpan di URL: bisa di-bookmark, dan kartu di dashboard bisa menaut langsung ke toko tertentu.
-  const month = searchParams.get('month') ?? monthNow; // "all" = akumulasi
+  // `period` menerima "YYYY-Www" (mingguan), "YYYY-MM" (bulanan), "YYYY"
+  // (tahunan), atau "all" (akumulasi). Param lama `month=YYYY-MM` tetap dibaca.
+  const legacyMonth = searchParams.get('month');
+  const period = searchParams.get('period') ?? legacyMonth ?? monthNow;
   const brand = searchParams.get('brand') ?? '';
   const storeId = searchParams.get('storeId') ?? '';
   const sort = (searchParams.get('sort') as SalesReportSort | null) ?? 'pcs';
-  const isAll = month === 'all';
+  const isAll = period === 'all';
+  // Saat "Semua waktu" tidak ada periode aktif; pakai mode terakhir yang dipilih.
+  const [modeFallback, setModeFallback] = useState<PeriodMode>('month');
+  const activeMode = isAll ? modeFallback : modeOf(period);
 
   const [search, setSearch] = useState('');
 
@@ -58,7 +99,7 @@ function TokoAnalytics() {
   };
 
   const query = useSalesReport({
-    month: isAll ? undefined : month,
+    period: isAll ? undefined : period,
     brand: brand || undefined,
     storeId: storeId || undefined,
     sort,
@@ -72,7 +113,20 @@ function TokoAnalytics() {
   const title = activeChannel
     ? `${brand} · ${activeChannel.channel}`
     : brand || 'Semua toko';
-  const periodLabel = isAll ? 'Akumulasi seluruh waktu' : monthLabel(month);
+  const periodLabel = isAll ? 'Akumulasi seluruh waktu' : periodLabelOf(period);
+
+  const setPeriodMode = (mode: PeriodMode) => {
+    setModeFallback(mode);
+    setFilters({
+      period:
+        mode === 'week'
+          ? isoWeekOf(today())
+          : mode === 'year'
+            ? today().slice(0, 4)
+            : monthNow,
+      month: null,
+    });
+  };
 
   return (
     <>
@@ -82,17 +136,58 @@ function TokoAnalytics() {
         description="Omzet, modal, profit, dan produk yang terjual — dihitung dari transaksi yang kamu input di POS."
         action={
           <div className="button-pair">
-            <input
-              className="month-input"
-              type="month"
-              value={isAll ? '' : month}
-              onChange={(event) => setFilters({ month: event.target.value || null })}
-              data-testid="input-toko-month"
-            />
+            <div className="tabs" role="tablist" aria-label="Periode laporan">
+              {([
+                ['week', 'Mingguan'],
+                ['month', 'Bulanan'],
+                ['year', 'Tahunan'],
+              ] as const).map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={cn('tab', activeMode === mode && 'active')}
+                  onClick={() => setPeriodMode(mode)}
+                  data-testid={`tab-toko-period-${mode}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {!isAll && activeMode === 'week' && (
+              <input
+                className="month-input"
+                type="week"
+                value={period}
+                onChange={(event) =>
+                  setFilters({ period: event.target.value || isoWeekOf(today()), month: null })
+                }
+                data-testid="input-toko-week"
+              />
+            )}
+            {!isAll && activeMode === 'year' && (
+              <input
+                className="month-input"
+                type="number"
+                min="2020"
+                max="2100"
+                value={period}
+                onChange={(event) => setFilters({ period: event.target.value || today().slice(0, 4), month: null })}
+                data-testid="input-toko-year"
+              />
+            )}
+            {!isAll && activeMode === 'month' && (
+              <input
+                className="month-input"
+                type="month"
+                value={period}
+                onChange={(event) => setFilters({ period: event.target.value || monthNow, month: null })}
+                data-testid="input-toko-month"
+              />
+            )}
             <button
               type="button"
               className={cn('pill', isAll && 'active')}
-              onClick={() => setFilters({ month: isAll ? null : 'all' })}
+              onClick={() => setFilters({ period: isAll ? null : 'all', month: null })}
               data-testid="button-toko-all-time"
             >
               Semua waktu

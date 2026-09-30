@@ -913,3 +913,37 @@ h2 { font: 700 16px/1.2 var(--app-font-serif); letter-spacing: -.02em; }
 .bell-empty { padding: 16px 14px; color: hsl(var(--muted-foreground)); font-size: 10.5px; }
 .bell-footer { display: block; padding: 9px 14px; border-top: 1px solid hsl(var(--border)); color: hsl(var(--primary)); font-size: 10.5px; font-weight: 700; text-decoration: none; }
 .top-product-value strong { font: 500 10px var(--app-font-mono); }
+
+/* ------------------------------------------------------------------ */
+/* Live selling: toolbar periode, ringkasan, kartu sesi                */
+/* ------------------------------------------------------------------ */
+.live-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -4px 0 14px; }
+.live-toolbar > .mono { margin-left: auto; font-size: 10px; }
+.live-summary { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+.live-stat { display: grid; gap: 5px; padding: 13px 14px; border-radius: 11px; background: hsl(var(--card) / .68); border: 1px solid hsl(var(--card-border) / .55); }
+.live-stat small { color: hsl(var(--muted-foreground)); font-size: 9.5px; font-weight: 700; }
+.live-stat b { font: 600 14px var(--app-font-mono); letter-spacing: -.04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-cards { display: grid; gap: 10px; }
+.session-card { display: grid; gap: 10px; padding: 14px; border-radius: 12px; border: 1px solid hsl(var(--border)); background: hsl(var(--background) / .6); transition: border-color .15s ease, box-shadow .15s ease; }
+.session-card:hover { border-color: hsl(169 43% 47% / .45); box-shadow: 0 8px 22px hsl(222 45% 13% / .08); }
+.session-card-head { display: flex; align-items: center; gap: 10px; }
+.session-card-host { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.session-card-host strong { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-card-host small { color: hsl(var(--muted-foreground)); font-size: 9.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-card-date { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; font-size: 10px; color: hsl(var(--muted-foreground)); }
+.session-day { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; color: hsl(var(--foreground)); }
+.session-date, .session-hours { font-family: var(--app-font-mono); }
+.session-hours { display: inline-flex; align-items: center; gap: 4px; color: hsl(30 62% 42%); font-weight: 700; }
+.session-card-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.session-stat { display: grid; gap: 2px; justify-items: start; padding: 8px 9px; border-radius: 8px; background: hsl(var(--secondary) / .6); }
+.session-stat svg { opacity: .7; }
+.session-stat span { font: 600 12px var(--app-font-mono); letter-spacing: -.03em; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-stat small { color: hsl(var(--muted-foreground)); font-size: 8.5px; text-transform: uppercase; letter-spacing: .06em; }
+.session-card-notes { color: hsl(var(--muted-foreground)); font-size: 10px; line-height: 1.55; white-space: pre-line; margin: 0; border-top: 1px dashed hsl(var(--border)); padding-top: 8px; }
+@media (max-width: 700px) { .live-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .session-card-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Avatar bulat kecil (logo toko / foto host) + sel nama toko di tabel master. */
+.product-thumb-avatar { border-radius: 999px; width: 34px; height: 34px; min-width: 34px; }
+.image-preview-button .product-thumb-avatar { box-shadow: 0 0 0 2px hsl(var(--card)), 0 0 0 3px hsl(var(--border)); }
+.store-name-cell { display: flex; align-items: center; gap: 9px; }
+.store-name-cell strong { font-size: 11px; }

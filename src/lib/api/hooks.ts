@@ -98,7 +98,7 @@ async function compressProductImage(file: File): Promise<Blob> {
 
 export async function uploadImage(
   file: File,
-  kind: 'product' | 'supplier' | 'sale' | 'invoice',
+  kind: 'product' | 'supplier' | 'sale' | 'invoice' | 'store' | 'host',
 ): Promise<{ url: string }> {
   const compressed = await compressProductImage(file);
   const formData = new FormData();
@@ -121,6 +121,16 @@ export async function uploadProductImage(file: File): Promise<{ url: string }> {
   return uploadImage(file, 'product');
 }
 
+/** Logo/foto brand toko & kanal. */
+export async function uploadStoreImage(file: File): Promise<{ url: string }> {
+  return uploadImage(file, 'store');
+}
+
+/** Foto host live selling. */
+export async function uploadHostImage(file: File): Promise<{ url: string }> {
+  return uploadImage(file, 'host');
+}
+
 /* ------------------------------------------------------------------ */
 /* query keys                                                          */
 /* ------------------------------------------------------------------ */
@@ -139,7 +149,7 @@ export const getListJobsQueryKey = (params?: { status?: string; attentionOnly?: 
 export const getGetJobQueryKey = (jobId: string) => ['jobs', jobId] as const;
 export const getListHostsQueryKey = () => ['hosts'] as const;
 export const getListSuppliersQueryKey = () => ['suppliers'] as const;
-export const getListLiveSessionsQueryKey = (params?: { month?: string }) =>
+export const getListLiveSessionsQueryKey = (params?: { period?: string }) =>
   ['live-sessions', params ?? {}] as const;
 export const getListLedgerQueryKey = () => ['ledger'] as const;
 export const getListModulesQueryKey = () => ['modules'] as const;
@@ -328,7 +338,7 @@ export function useListSuppliers(options: { enabled?: boolean } = {}) {
   });
 }
 
-export function useListLiveSessions(params: { month?: string } = {}) {
+export function useListLiveSessions(params: { period?: string } = {}) {
   return useQuery({
     queryKey: getListLiveSessionsQueryKey(params),
     queryFn: ({ signal }) => request<LiveSessionRow[]>('/live-sessions', { params, signal }),
@@ -338,6 +348,8 @@ export function useListLiveSessions(params: { month?: string } = {}) {
 export type SalesReportParams = {
   /** YYYY-MM; kosong = akumulasi seluruh waktu. */
   month?: string;
+  /** "YYYY-Www" | "YYYY-MM" | "YYYY" — filter mingguan/bulanan/tahunan; menang atas `month`. */
+  period?: string;
   brand?: string;
   storeId?: string;
   sort?: SalesReportSort;
@@ -347,11 +359,17 @@ export type SalesReportParams = {
 export function useSalesReport(params: SalesReportParams = {}) {
   return useQuery({
     queryKey: getSalesReportQueryKey(params),
-    queryFn: ({ signal }) =>
-      request<SalesReport>('/reports/sales', {
+    queryFn: ({ signal }) => {
+      if (params.period) {
+        // Mode periode tidak memakai param month sama sekali.
+        const { month: _month, ...rest } = params;
+        return request<SalesReport>('/reports/sales', { params: rest, signal });
+      }
+      return request<SalesReport>('/reports/sales', {
         params: { ...params, month: params.month || 'all' },
         signal,
-      }),
+      });
+    },
     // Tampilkan data filter sebelumnya sementara filter baru dimuat, supaya halaman tidak berkedip.
     placeholderData: keepPreviousData,
   });

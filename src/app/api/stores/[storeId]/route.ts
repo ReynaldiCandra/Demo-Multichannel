@@ -23,10 +23,14 @@ export const PATCH = handler(async (request: Request, context: Context) => {
   const parsed = await parsePatch(request, StoreInput.partial());
   if (!parsed.success) return badRequest(parsed.error);
 
-  const { feePercent, ...rest } = parsed.data;
+  const { feePercent, imageUrl, ...rest } = parsed.data;
   const [store] = await db
     .update(storesTable)
-    .set({ ...rest, ...(feePercent === undefined ? {} : { feePercent: String(feePercent) }) })
+    .set({
+      ...rest,
+      ...(feePercent === undefined ? {} : { feePercent: String(feePercent) }),
+      ...(imageUrl === undefined ? {} : { imageUrl }),
+    })
     .where(eq(storesTable.id, storeId))
     .returning();
 

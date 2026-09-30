@@ -36,6 +36,7 @@ describe('API penjualan: catat, edit, status, biaya otomatis, anti-ganda', () =>
       '0004_safe_reporting_indexes_and_suppliers.sql',
       '0005_product_supplier_image.sql',
       '0006_supplier_sale_image.sql',
+      '0012_live_and_store_media.sql',
     ]) {
       await pg.exec(readFileSync(`supabase/migrations/${file}`, 'utf8'));
     }

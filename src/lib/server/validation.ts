@@ -21,6 +21,8 @@ export const StoreInput = z.object({
   isActive: z.boolean().optional().default(true),
   /** Potongan platform (%) dari omzet. 0 = biaya diisi manual di tiap transaksi. */
   feePercent: z.coerce.number().min(0, 'Minimal 0%').max(100, 'Maksimal 100%').optional().default(0),
+  /** Logo/foto brand toko (URL hasil upload Vercel Blob). */
+  imageUrl: z.string().url('URL logo tidak valid').nullable().optional(),
 });
 
 export const ProductInput = z.object({
@@ -106,6 +108,8 @@ export const HostInput = z.object({
   phone: nullableText,
   commissionType: z.enum(['per_hour', 'per_order', 'percentage_revenue']).default('per_hour'),
   rate: z.coerce.number().int().min(0).default(0),
+  /** Foto host (URL hasil upload Vercel Blob). */
+  imageUrl: z.string().url('URL foto tidak valid').nullable().optional(),
   isActive: z.boolean().optional().default(true),
 });
 
@@ -117,10 +121,15 @@ export const LiveSessionInput = z.object({
   endTime: nullableText,
   totalOrders: z.coerce.number().int().min(0).default(0),
   totalRevenue: z.coerce.number().int().min(0).default(0),
+  /** Jumlah komentar live (engagement); opsional, default 0. */
+  totalComments: z.coerce.number().int().min(0).default(0),
   commissionAmount: z.coerce.number().int().min(0).default(0),
   commissionPaid: z.boolean().default(false),
   notes: nullableText,
 });
+
+/** Periode laporan: mingguan (YYYY-Www), bulanan (YYYY-MM), tahunan (YYYY). */
+export const PERIOD_PATTERN = /^(\d{4}-W\d{2}|\d{4}-\d{2}|\d{4})$/;
 
 export const MonthQuery = z
   .string()

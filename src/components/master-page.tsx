@@ -14,6 +14,7 @@ import {
   useUpdateProduct,
   useUpdateStore,
   uploadProductImage,
+  uploadStoreImage,
 } from '@/lib/api/hooks';
 import type { ProductRow, StoreRow } from '@/lib/api/types';
 import { Badge, Button, ConfirmDialog, Field, ImagePreviewButton, Modal, Panel, PageTitle, Pagination, State, type ConfirmRequest } from '@/components/ui';
@@ -107,10 +108,22 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
       return;
     }
 
+    const imageFile = form.get('image') as File | null;
+    let imageUrl = editingStore?.imageUrl ?? null;
+    try {
+      if (imageFile && imageFile.size > 0) {
+        imageUrl = (await uploadStoreImage(imageFile)).url;
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Upload logo gagal.');
+      return;
+    }
+
     const data = {
       name: String(form.get('name')),
       channel: String(form.get('channel') || '') || null,
       feePercent: Number(form.get('feePercent') || 0),
+      imageUrl,
       isActive: editing ? editing.isActive : true,
     };
     if (editing) updateStore.mutate({ storeId: editing.id, data });
@@ -327,7 +340,7 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
                     </>
                   ) : (
                     <>
-                      <th>Nama toko</th>
+                      <th>Toko</th>
                       <th>Kanal</th>
                       <th>Potongan</th>
                       <th>Produk / transaksi</th>
@@ -402,7 +415,10 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
                     : visibleStores.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((item) => (
                       <tr key={item.id} data-testid={`row-stores-${item.id}`}>
                         <td>
-                          <strong>{item.name}</strong>
+                          <div className="store-name-cell">
+                            <ImagePreviewButton src={item.imageUrl} alt={`Logo ${item.name}`} avatar />
+                            <strong>{item.name}</strong>
+                          </div>
                         </td>
                         <td>{item.channel || '—'}</td>
                         <td className="mono">{item.feePercent ? `${item.feePercent}%` : '—'}</td>
@@ -598,6 +614,20 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
                     required
                     data-testid="input-store-name"
                   />
+                </Field>
+                <Field
+                  label="Logo / foto brand"
+                  hint="Tampil di daftar toko & analisa. JPG, PNG, atau WebP, otomatis diperkecil."
+                >
+                  <input
+                    name="image"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    data-testid="input-store-image"
+                  />
+                  {editingStore?.imageUrl && (
+                    <ImagePreviewButton src={editingStore.imageUrl} alt={`Logo ${editingStore.name}`} />
+                  )}
                 </Field>
                 <Field label="Kanal jualan">
                   <input

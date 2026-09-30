@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSalesReport, type SalesReportSort } from '@/lib/server/reports';
+import { PERIOD_PATTERN } from '@/lib/server/validation';
 import { handler } from '@/lib/server/http';
 
 export const dynamic = 'force-dynamic';
@@ -10,13 +11,24 @@ const SORTS: SalesReportSort[] = ['pcs', 'revenue', 'profit', 'margin'];
 
 /**
  * GET /api/reports/sales
- *   month   YYYY-MM, atau kosong / "all" untuk akumulasi seluruh waktu
+ *   period  "YYYY-Www" (minggu ISO) | "YYYY-MM" | "YYYY", atau "all"/kosong
+ *           untuk akumulasi seluruh waktu — menang atas `month`
+ *   month   YYYY-MM (cara lama, tetap didukung)
  *   brand   nama brand (gabungan semua kanal)
  *   storeId satu kanal spesifik
  *   sort    pcs (terlaris) | revenue (omzet) | profit | margin
  */
 export const GET = handler(async (request: Request) => {
   const params = new URL(request.url).searchParams;
+
+  const rawPeriod = params.get('period');
+  const period = rawPeriod && rawPeriod !== 'all' ? rawPeriod : null;
+  if (period && !PERIOD_PATTERN.test(period)) {
+    return NextResponse.json(
+      { error: 'Format periode harus YYYY-Www, YYYY-MM, atau YYYY' },
+      { status: 400 },
+    );
+  }
 
   const rawMonth = params.get('month');
   const month = rawMonth && rawMonth !== 'all' ? rawMonth : null;
@@ -33,7 +45,9 @@ export const GET = handler(async (request: Request) => {
   const sort = rawSort && SORTS.includes(rawSort) ? rawSort : 'pcs';
 
   const report = await getSalesReport({
-    month,
+    // Period menang atas month supaya dua filter tidak saling menimpa.
+    month: period ? null : month,
+    period,
     brand: params.get('brand') || null,
     storeId,
     sort,

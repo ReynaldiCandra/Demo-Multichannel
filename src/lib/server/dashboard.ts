@@ -31,6 +31,49 @@ export function monthKey(date: string): string {
   return date.slice(0, 7);
 }
 
+/**
+ * Batas tanggal untuk periode fleksibel:
+ *   "2026-W39" = minggu ISO (Senin s.d. Minggu)
+ *   "2026-09"  = satu bulan
+ *   "2026"     = satu tahun penuh
+ * Dipakai filter mingguan/bulanan/tahunan di Analisa Toko & Live Selling.
+ */
+export function periodBounds(
+  period: string,
+): { start: string; end: string; label: string } | null {
+  if (/^\d{4}-W\d{2}$/.test(period)) {
+    const [yearPart, weekPart] = period.split('-W');
+    const year = Number(yearPart);
+    const week = Number(weekPart);
+    if (week < 1 || week > 53) return null;
+    // Senin pekan ISO: 4 Januari selalu di pekan 1; mundur ke hari Senin.
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    const jan4Dow = jan4.getUTCDay() || 7;
+    const monday = new Date(jan4);
+    monday.setUTCDate(jan4.getUTCDate() - (jan4Dow - 1) + (week - 1) * 7);
+    const sunday = new Date(monday);
+    sunday.setUTCDate(monday.getUTCDate() + 7);
+    const fmt = (date: Date) => date.toISOString().slice(0, 10);
+    return { start: fmt(monday), end: fmt(sunday), label: `Minggu ${week} ${year}` };
+  }
+
+  if (/^\d{4}-\d{2}$/.test(period)) {
+    const bounds = monthBounds(period);
+    return { ...bounds, label: period };
+  }
+
+  if (/^\d{4}$/.test(period)) {
+    const year = Number(period);
+    return {
+      start: `${year}-01-01`,
+      end: `${year + 1}-01-01`,
+      label: `Tahun ${year}`,
+    };
+  }
+
+  return null;
+}
+
 export function dateOnly(value: string | Date | null | undefined): string | null {
   if (value == null) return null;
   if (value instanceof Date) return value.toISOString().slice(0, 10);

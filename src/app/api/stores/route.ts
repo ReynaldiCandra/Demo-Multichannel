@@ -14,6 +14,7 @@ export const GET = handler(async () => {
         name: storesTable.name,
         channel: storesTable.channel,
         isActive: storesTable.isActive,
+        imageUrl: storesTable.imageUrl,
         feePercent: storesTable.feePercent,
         productCount: sql<string>`count(distinct ${productsTable.id})`,
         transactionCount: sql<string>`count(distinct ${salesTable.id})`,

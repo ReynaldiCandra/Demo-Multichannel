@@ -3,6 +3,8 @@ export type StoreRow = {
   name: string;
   channel: string;
   isActive: boolean;
+  /** Logo/foto brand toko. */
+  imageUrl: string | null;
   /** Potongan platform (%) — dipakai menghitung biaya platform otomatis. */
   feePercent: number;
   productCount: number;
@@ -190,6 +192,7 @@ export type Host = {
   phone: string | null;
   commissionType: string;
   rate: number;
+  imageUrl: string | null;
   isActive: boolean;
 };
 
@@ -218,13 +221,19 @@ export type LiveSessionRow = {
   id: string;
   hostId: string;
   hostName: string;
+  hostImage: string | null;
   storeId: string;
   storeName: string;
   date: string;
   startTime: string | null;
   endTime: string | null;
+  /** Hari dalam seminggu, contoh "Senin" — diturunkan dari tanggal. */
+  dayLabel?: string;
+  /** Durasi tayang dalam jam desimal; null kalau jam tidak lengkap. */
+  durationHours: number | null;
   totalOrders: number;
   totalRevenue: number;
+  totalComments: number;
   commissionAmount: number;
   commissionPaid: boolean;
   notes: string | null;
@@ -375,6 +384,8 @@ export type SalesReportProduct = SalesMetrics & {
 
 export type SalesReport = {
   month: string | null;
+  /** "YYYY-Www" | "YYYY-MM" | "YYYY" — null saat filter bulanan lama / semua waktu. */
+  period: string | null;
   totals: SalesMetrics & { averageOrder: number; activeProducts: number };
   products: SalesReportProduct[];
   channels: Array<

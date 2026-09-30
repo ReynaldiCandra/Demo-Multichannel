@@ -1,85 +1,48 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+/**
+ * CRM — halaman utama: pipeline leads (papan hot/warm/closing/follow-up).
+ * Klien & produk pindah ke /crm/klien, jadwal follow-up ke /crm/follow-up —
+ * polanya sama seperti KEUANGAN yang memisah Settlement dan Invoice.
+ */
+
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { CalendarClock, Phone, Plus } from 'lucide-react';
 import {
-  CalendarClock,
-  Flame,
-  Handshake,
-  MessageCircle,
-  Phone,
-  Plus,
-  RefreshCcw,
-  Users,
-} from 'lucide-react';
-import {
-  useCreateCrmClient,
   useCreateCrmLead,
-  useCreateCrmProduct,
-  useDeleteCrmClient,
   useDeleteCrmLead,
-  useDeleteCrmProduct,
   useListCrmClients,
   useListCrmLeads,
   useListCrmProducts,
   useUpdateCrmLead,
 } from '@/lib/api/hooks';
 import type { CrmLeadCategory, CrmLeadRow } from '@/lib/api/types';
-import {
-  Badge,
-  Button,
-  ConfirmDialog,
-  Field,
-  Modal,
-  PageTitle,
-  Panel,
-  State,
-  type ConfirmRequest,
-} from '@/components/ui';
+import { Badge, Button, ConfirmDialog, PageTitle, Panel, State, type ConfirmRequest } from '@/components/ui';
 import { cn, dateLabel, today } from '@/lib/format';
+import {
+  CATEGORY_LABEL,
+  CATEGORY_TONE,
+  CRM_CATEGORIES,
+  CRM_SUB_PAGES,
+  LeadFormModal,
+  SOURCE_LABEL,
+} from './_shared';
 
-const CATEGORY_LABEL: Record<CrmLeadCategory, string> = {
-  hot: 'Hot',
-  warm: 'Warm',
-  closing: 'Closing',
-  follow_up: 'Follow-up',
-};
-
-const CATEGORY_TONE: Record<CrmLeadCategory, 'danger' | 'yellow' | 'good' | 'neutral'> = {
-  hot: 'danger',
-  warm: 'yellow',
-  closing: 'good',
-  follow_up: 'neutral',
-};
-
-const SOURCE_LABEL: Record<string, string> = {
-  meta: 'Meta Ads',
-  google: 'Google',
-  shopee_ads: 'Shopee Ads',
-  tiktok_ads: 'TikTok Ads',
-  organik: 'Organik',
-  lainnya: 'Lainnya',
-};
-
-type TabKey = 'pipeline' | 'klien' | 'produk';
-
-export default function CrmPage() {
-  const [tab, setTab] = useState<TabKey>('pipeline');
+export default function CrmPipelinePage() {
+  const pathname = usePathname();
   const [filterClient, setFilterClient] = useState('');
   const [filterSource, setFilterSource] = useState('');
   const [search, setSearch] = useState('');
   const [confirming, setConfirming] = useState<ConfirmRequest | null>(null);
-
   const [leadModal, setLeadModal] = useState<{ open: boolean; lead: CrmLeadRow | null }>({
     open: false,
     lead: null,
   });
-  const [clientModal, setClientModal] = useState<{ open: boolean; editId?: string }>({ open: false });
-  const [productModal, setProductModal] = useState<{ open: boolean; editId?: string }>({ open: false });
 
   const clients = useListCrmClients();
-  const products = useListCrmProducts(
-    filterClient ? { clientId: filterClient } : {},
-  );
+  const products = useListCrmProducts({});
   const leads = useListCrmLeads({
     clientId: filterClient || undefined,
     source: filterSource || undefined,
@@ -89,14 +52,9 @@ export default function CrmPage() {
   const createLead = useCreateCrmLead();
   const updateLead = useUpdateCrmLead();
   const deleteLead = useDeleteCrmLead();
-  const createClient = useCreateCrmClient();
-  const deleteClient = useDeleteCrmClient();
-  const createProduct = useCreateCrmProduct();
-  const deleteProduct = useDeleteCrmProduct();
 
-  const data = leads.data;
-  const rows = useMemo(() => data?.leads ?? [], [data]);
-  const counts = data?.counts;
+  const rows = useMemo(() => leads.data?.leads ?? [], [leads.data]);
+  const counts = leads.data?.counts;
 
   const grouped = useMemo(() => {
     const map: Record<CrmLeadCategory, CrmLeadRow[]> = {
@@ -111,14 +69,15 @@ export default function CrmPage() {
 
   const dueCount = rows.filter(
     (lead) =>
-      lead.category !== 'closing' &&
-      (!lead.followUpAt || lead.followUpAt <= today()),
+      lead.category !== 'closing' && (!lead.followUpAt || lead.followUpAt <= today()),
   ).length;
+
+  const closeLeadModal = () => setLeadModal({ open: false, lead: null });
 
   return (
     <>
       <PageTitle
-        eyebrow="CRM / LEADS"
+        eyebrow="CRM / PIPELINE"
         title="Calon pembeli, terkelola."
         description="Pipeline per klien & produk: hot, warm, closing, follow-up. Semua hasil iklan masuk ke satu papan."
         action={
@@ -127,6 +86,18 @@ export default function CrmPage() {
           </Button>
         }
       />
+
+      <div className="pill-row pill-row-sub" role="navigation" aria-label="Sub-halaman CRM">
+        {CRM_SUB_PAGES.map((page) => (
+          <Link
+            key={page.href}
+            href={page.href}
+            className={cn('pill pill-sm', pathname === page.href && 'active')}
+          >
+            {page.label}
+          </Link>
+        ))}
+      </div>
 
       <div className="crm-toolbar">
         <select
@@ -162,40 +133,17 @@ export default function CrmPage() {
           aria-label="Cari lead"
           data-testid="input-crm-search"
         />
-        <div className="crm-tabs">
-          <button
-            type="button"
-            className={cn(tab === 'pipeline' && 'active')}
-            onClick={() => setTab('pipeline')}
-          >
-            Pipeline
-          </button>
-          <button
-            type="button"
-            className={cn(tab === 'klien' && 'active')}
-            onClick={() => setTab('klien')}
-          >
-            Klien ({clients.data?.length ?? 0})
-          </button>
-          <button
-            type="button"
-            className={cn(tab === 'produk' && 'active')}
-            onClick={() => setTab('produk')}
-          >
-            Produk ({products.data?.length ?? 0})
-          </button>
-        </div>
       </div>
 
       {leads.isLoading ? (
         <State type="loading" />
       ) : leads.isError ? (
         <State type="error" onRetry={() => leads.refetch()} />
-      ) : tab === 'pipeline' ? (
+      ) : (
         <>
           {counts && (
             <div className="crm-chips">
-              {(Object.keys(CATEGORY_LABEL) as CrmLeadCategory[]).map((key) => (
+              {CRM_CATEGORIES.map((key) => (
                 <span key={key} className="crm-chip">
                   <Badge tone={CATEGORY_TONE[key]}>{CATEGORY_LABEL[key]}</Badge>
                   <b data-testid={`crm-count-${key}`}>{counts[key] ?? 0}</b>
@@ -211,10 +159,12 @@ export default function CrmPage() {
           )}
 
           {rows.length === 0 ? (
-            <State type="empty" />
+            <Panel className="table-panel">
+              <State type="empty" />
+            </Panel>
           ) : (
             <div className="crm-board" data-testid="crm-board">
-              {(Object.keys(CATEGORY_LABEL) as CrmLeadCategory[]).map((category) => (
+              {CRM_CATEGORIES.map((category) => (
                 <section key={category} className="crm-column" data-testid={`crm-column-${category}`}>
                   <header className="crm-column-head">
                     <h2>{CATEGORY_LABEL[category]}</h2>
@@ -233,7 +183,7 @@ export default function CrmPage() {
                               aria-label="Edit lead"
                               data-testid={`button-edit-lead-${lead.id}`}
                             >
-                              <MessageCircle size={13} />
+                              <Phone size={13} />
                             </button>
                             <button
                               type="button"
@@ -283,7 +233,7 @@ export default function CrmPage() {
                             aria-label="Pindah kategori"
                             data-testid={`select-lead-category-${lead.id}`}
                           >
-                            {(Object.keys(CATEGORY_LABEL) as CrmLeadCategory[]).map((key) => (
+                            {CRM_CATEGORIES.map((key) => (
                               <option key={key} value={key}>
                                 → {CATEGORY_LABEL[key]}
                               </option>
@@ -302,133 +252,13 @@ export default function CrmPage() {
                         </div>
                       </article>
                     ))}
-                    {grouped[category].length === 0 && (
-                      <p className="crm-empty-col">Kosong</p>
-                    )}
+                    {grouped[category].length === 0 && <p className="crm-empty-col">Kosong</p>}
                   </div>
                 </section>
               ))}
             </div>
           )}
         </>
-      ) : tab === 'klien' ? (
-        <Panel className="table-panel">
-          <div className="panel-head">
-            <h2>Klien kampanye</h2>
-            <Button variant="secondary" onClick={() => setClientModal({ open: true })} data-testid="button-add-client">
-              <Plus size={14} /> Klien baru
-            </Button>
-          </div>
-          {clients.isLoading ? (
-            <State type="loading" />
-          ) : !(clients.data ?? []).length ? (
-            <State type="empty" />
-          ) : (
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Klien</th>
-                    <th>Bidang</th>
-                    <th>Kontak</th>
-                    <th>Produk</th>
-                    <th>Leads</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {(clients.data ?? []).map((client) => (
-                    <tr key={client.id} data-testid={`row-crm-client-${client.id}`}>
-                      <td>
-                        <strong>{client.name}</strong>
-                        {client.notes && <small className="table-sub">{client.notes}</small>}
-                      </td>
-                      <td>{client.category ?? '—'}</td>
-                      <td>
-                        {client.contactName ?? '—'}
-                        {client.phone && <small className="table-sub">{client.phone}</small>}
-                      </td>
-                      <td>{client.productCount}</td>
-                      <td>{client.leadCount}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="icon-btn danger-icon"
-                          aria-label="Hapus klien"
-                          onClick={() =>
-                            setConfirming({
-                              message: `Hapus klien "${client.name}" beserta ${client.leadCount} leads & ${client.productCount} produknya?`,
-                              onConfirm: () => deleteClient.mutate({ clientId: client.id }),
-                            })
-                          }
-                          data-testid={`button-delete-client-${client.id}`}
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Panel>
-      ) : (
-        <Panel className="table-panel">
-          <div className="panel-head">
-            <h2>Produk iklan</h2>
-            <Button variant="secondary" onClick={() => setProductModal({ open: true })} data-testid="button-add-product">
-              <Plus size={14} /> Produk baru
-            </Button>
-          </div>
-          {products.isLoading ? (
-            <State type="loading" />
-          ) : !(products.data ?? []).length ? (
-            <State type="empty" />
-          ) : (
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Produk</th>
-                    <th>Klien</th>
-                    <th>Harga referensi</th>
-                    <th>Catatan</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {(products.data ?? []).map((product) => (
-                    <tr key={product.id} data-testid={`row-crm-product-${product.id}`}>
-                      <td>
-                        <strong>{product.name}</strong>
-                      </td>
-                      <td>{product.clientName}</td>
-                      <td>{product.price ? `Rp ${product.price.toLocaleString('id-ID')}` : '—'}</td>
-                      <td>{product.notes ?? '—'}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="icon-btn danger-icon"
-                          aria-label="Hapus produk"
-                          onClick={() =>
-                            setConfirming({
-                              message: `Hapus produk "${product.name}"?`,
-                              onConfirm: () => deleteProduct.mutate({ productId: product.id }),
-                            })
-                          }
-                          data-testid={`button-delete-product-${product.id}`}
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Panel>
       )}
 
       {leadModal.open && (
@@ -436,36 +266,12 @@ export default function CrmPage() {
           lead={leadModal.lead}
           clients={clients.data ?? []}
           products={products.data ?? []}
-          onClose={() => setLeadModal({ open: false, lead: null })}
-          onCreate={(data) => createLead.mutate({ data }, { onSuccess: () => setLeadModal({ open: false, lead: null }) })}
+          onClose={closeLeadModal}
+          onCreate={(data) => createLead.mutate({ data }, { onSuccess: closeLeadModal })}
           onUpdate={(leadId, data) =>
-            updateLead.mutate(
-              { leadId, data },
-              { onSuccess: () => setLeadModal({ open: false, lead: null }) },
-            )
+            updateLead.mutate({ leadId, data }, { onSuccess: closeLeadModal })
           }
           pending={createLead.isPending || updateLead.isPending}
-        />
-      )}
-
-      {clientModal.open && (
-        <ClientFormModal
-          onClose={() => setClientModal({ open: false })}
-          onSubmit={(data) =>
-            createClient.mutate({ data }, { onSuccess: () => setClientModal({ open: false }) })
-          }
-          pending={createClient.isPending}
-        />
-      )}
-
-      {productModal.open && (
-        <ProductFormModal
-          clients={clients.data ?? []}
-          onClose={() => setProductModal({ open: false })}
-          onSubmit={(data) =>
-            createProduct.mutate({ data }, { onSuccess: () => setProductModal({ open: false }) })
-          }
-          pending={createProduct.isPending}
         />
       )}
 
@@ -480,272 +286,5 @@ export default function CrmPage() {
         />
       )}
     </>
-  );
-}
-
-type LeadFormData = {
-  clientId: string;
-  productId: string | null;
-  name: string;
-  phone: string | null;
-  region: string | null;
-  source: string;
-  category: string;
-  notes: string | null;
-  followUpAt: string | null;
-};
-
-function LeadFormModal({
-  lead,
-  clients,
-  products,
-  onClose,
-  onCreate,
-  onUpdate,
-  pending,
-}: {
-  lead: CrmLeadRow | null;
-  clients: Array<{ id: string; name: string }>;
-  products: Array<{ id: string; clientId: string; name: string }>;
-  onClose: () => void;
-  onCreate: (data: LeadFormData) => void;
-  onUpdate: (leadId: string, data: Partial<LeadFormData>) => void;
-  pending: boolean;
-}) {
-  const [clientId, setClientId] = useState(lead?.clientId ?? clients[0]?.id ?? '');
-  const [productId, setProductId] = useState(lead?.productId ?? '');
-  const [name, setName] = useState(lead?.name ?? '');
-  const [phone, setPhone] = useState(lead?.phone ?? '');
-  const [region, setRegion] = useState(lead?.region ?? '');
-  const [source, setSource] = useState(lead?.source ?? 'meta');
-  const [category, setCategory] = useState<string>(lead?.category ?? 'follow_up');
-  const [notes, setNotes] = useState(lead?.notes ?? '');
-  const [followUpAt, setFollowUpAt] = useState(lead?.followUpAt ?? '');
-
-  const clientProducts = products.filter((product) => product.clientId === clientId);
-
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const data = {
-      clientId,
-      productId: productId || null,
-      name: name.trim(),
-      phone: phone.trim() || null,
-      region: region.trim() || null,
-      source,
-      category,
-      notes: notes.trim() || null,
-      followUpAt: followUpAt || null,
-    };
-    if (lead) {
-      const { clientId: _ignored, ...rest } = data;
-      onUpdate(lead.id, rest);
-    } else {
-      onCreate(data);
-    }
-  };
-
-  return (
-    <Modal title={lead ? 'Edit lead' : 'Lead baru'} onClose={onClose}>
-      <form className="form-grid" onSubmit={submit}>
-        <Field label="Klien" hint="Pemilik kampanye / produk ini.">
-          <select
-            value={clientId}
-            onChange={(event) => {
-              setClientId(event.target.value);
-              setProductId('');
-            }}
-            required
-            data-testid="select-lead-client"
-          >
-            <option value="" disabled>
-              Pilih klien
-            </option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Produk" hint="Opsional — produk yang ditawarkan.">
-          <select value={productId} onChange={(event) => setProductId(event.target.value)}>
-            <option value="">— tanpa produk —</option>
-            {clientProducts.map((product) => (
-              <option key={product.id} value={product.id}>
-                {product.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Nama lead">
-          <input value={name} onChange={(event) => setName(event.target.value)} required maxLength={120} data-testid="input-lead-name" />
-        </Field>
-        <Field label="No. HP / WhatsApp" hint="Dipakai untuk tombol chat cepat.">
-          <input value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" />
-        </Field>
-        <Field label="Daerah">
-          <input value={region} onChange={(event) => setRegion(event.target.value)} />
-        </Field>
-        <Field label="Sumber">
-          <select value={source} onChange={(event) => setSource(event.target.value)}>
-            {Object.entries(SOURCE_LABEL).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Kategori">
-          <select value={category} onChange={(event) => setCategory(event.target.value)}>
-            {(Object.keys(CATEGORY_LABEL) as CrmLeadCategory[]).map((key) => (
-              <option key={key} value={key}>
-                {CATEGORY_LABEL[key]}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Follow-up berikutnya" hint="Kosongkan kalau belum dijadwalkan.">
-          <input type="date" value={followUpAt} onChange={(event) => setFollowUpAt(event.target.value)} />
-        </Field>
-        <Field label="Catatan" hint="Riwayat chat, permintaan khusus, dll.">
-          <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={2} />
-        </Field>
-        <div className="form-actions">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Batal
-          </Button>
-          <Button type="submit" disabled={pending || !clientId} data-testid="button-submit-lead">
-            {pending ? 'Menyimpan…' : lead ? 'Simpan perubahan' : 'Tambah lead'}
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-function ClientFormModal({
-  onClose,
-  onSubmit,
-  pending,
-}: {
-  onClose: () => void;
-  onSubmit: (data: Record<string, unknown>) => void;
-  pending: boolean;
-}) {
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
-  const [contactName, setContactName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [notes, setNotes] = useState('');
-
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    onSubmit({
-      name: name.trim(),
-      category: category.trim() || null,
-      contactName: contactName.trim() || null,
-      phone: phone.trim() || null,
-      notes: notes.trim() || null,
-    });
-  };
-
-  return (
-    <Modal title="Klien baru" onClose={onClose}>
-      <form className="form-grid" onSubmit={submit}>
-        <Field label="Nama klien" hint="Nama brand / pemilik kampanye.">
-          <input value={name} onChange={(event) => setName(event.target.value)} required maxLength={120} data-testid="input-client-name" />
-        </Field>
-        <Field label="Bidang usaha" hint="Contoh: konveksi, kafe, freelancer.">
-          <input value={category} onChange={(event) => setCategory(event.target.value)} />
-        </Field>
-        <Field label="Nama kontak">
-          <input value={contactName} onChange={(event) => setContactName(event.target.value)} />
-        </Field>
-        <Field label="No. HP">
-          <input value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" />
-        </Field>
-        <Field label="Catatan">
-          <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={2} />
-        </Field>
-        <div className="form-actions">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Batal
-          </Button>
-          <Button type="submit" disabled={pending} data-testid="button-submit-client">
-            {pending ? 'Menyimpan…' : 'Tambah klien'}
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-function ProductFormModal({
-  clients,
-  onClose,
-  onSubmit,
-  pending,
-}: {
-  clients: Array<{ id: string; name: string }>;
-  onClose: () => void;
-  onSubmit: (data: Record<string, unknown>) => void;
-  pending: boolean;
-}) {
-  const [clientId, setClientId] = useState(clients[0]?.id ?? '');
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [notes, setNotes] = useState('');
-
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    onSubmit({
-      clientId,
-      name: name.trim(),
-      price: Number(price || 0),
-      notes: notes.trim() || null,
-    });
-  };
-
-  return (
-    <Modal title="Produk iklan baru" onClose={onClose}>
-      <form className="form-grid" onSubmit={submit}>
-        <Field label="Klien">
-          <select value={clientId} onChange={(event) => setClientId(event.target.value)} required>
-            <option value="" disabled>
-              Pilih klien
-            </option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Nama produk">
-          <input value={name} onChange={(event) => setName(event.target.value)} required maxLength={160} data-testid="input-product-name" />
-        </Field>
-        <Field label="Harga referensi" hint="Untuk hitung closing; 0 = belum ditentukan.">
-          <input
-            type="number"
-            min={0}
-            value={price}
-            onChange={(event) => setPrice(event.target.value)}
-            inputMode="numeric"
-          />
-        </Field>
-        <Field label="Catatan">
-          <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={2} />
-        </Field>
-        <div className="form-actions">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Batal
-          </Button>
-          <Button type="submit" disabled={pending || !clientId} data-testid="button-submit-product">
-            {pending ? 'Menyimpan…' : 'Tambah produk'}
-          </Button>
-        </div>
-      </form>
-    </Modal>
   );
 }

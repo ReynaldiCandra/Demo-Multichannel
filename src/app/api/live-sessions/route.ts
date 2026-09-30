@@ -1,20 +1,27 @@
 import { NextResponse } from 'next/server';
 import { and, desc, eq, gte, lt } from 'drizzle-orm';
 import { db, hostsTable, liveSessionsTable, storesTable } from '@/lib/db';
-import { dateOnly, monthBounds } from '@/lib/server/dashboard';
+import { dateOnly, periodBounds } from '@/lib/server/dashboard';
 import { badRequest, handler, parseBody, requireWriteAccess } from '@/lib/server/http';
-import { LiveSessionInput } from '@/lib/server/validation';
+import { LiveSessionInput, PERIOD_PATTERN } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * GET /api/live-sessions?period=...
+ *   period "YYYY-Www" (minggu ISO) | "YYYY-MM" (bulan) | "YYYY" (tahun)
+ *   Tanpa period: bulan berjalan (perilaku lama tetap aman).
+ */
 export const GET = handler(async (request: Request) => {
-  const month = new URL(request.url).searchParams.get('month');
-  const bounds = month && /^\d{4}-\d{2}$/.test(month) ? monthBounds(month) : null;
+  const raw = new URL(request.url).searchParams.get('period');
+  const period = raw && PERIOD_PATTERN.test(raw) ? raw : null;
+  const bounds = period ? periodBounds(period) : null;
 
   const rows = await db
     .select({
       session: liveSessionsTable,
       hostName: hostsTable.name,
+      hostImage: hostsTable.imageUrl,
       storeName: storesTable.name,
     })
     .from(liveSessionsTable)
@@ -23,13 +30,12 @@ export const GET = handler(async (request: Request) => {
     .where(bounds ? and(gte(liveSessionsTable.sessionDate, bounds.start), lt(liveSessionsTable.sessionDate, bounds.end)) : undefined)
     .orderBy(desc(liveSessionsTable.sessionDate));
 
-  const filtered = rows;
-
   return NextResponse.json(
-    filtered.map(({ session, hostName, storeName }) => ({
+    rows.map(({ session, hostName, hostImage, storeName }) => ({
       id: session.id,
       hostId: session.hostId,
       hostName,
+      hostImage,
       storeId: session.storeId,
       storeName,
       date: session.sessionDate,
@@ -37,6 +43,7 @@ export const GET = handler(async (request: Request) => {
       endTime: session.endTime,
       totalOrders: session.totalOrders,
       totalRevenue: session.totalRevenue,
+      totalComments: session.totalComments,
       commissionAmount: session.commissionAmount,
       commissionPaid: session.commissionPaid,
       notes: session.notes,
@@ -61,6 +68,7 @@ export const POST = handler(async (request: Request) => {
       endTime: parsed.data.endTime,
       totalOrders: parsed.data.totalOrders,
       totalRevenue: parsed.data.totalRevenue,
+      totalComments: parsed.data.totalComments,
       commissionAmount: parsed.data.commissionAmount,
       commissionPaid: parsed.data.commissionPaid,
       notes: parsed.data.notes,
@@ -74,6 +82,7 @@ export const POST = handler(async (request: Request) => {
     {
       ...session,
       hostName: host?.name ?? 'Host',
+      hostImage: host?.imageUrl ?? null,
       storeName: store?.name ?? 'Toko',
       date: session.sessionDate,
     },
