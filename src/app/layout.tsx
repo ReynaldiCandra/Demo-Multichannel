@@ -31,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ShellGate>
             <ErrorBoundary>{children}</ErrorBoundary>
           </ShellGate>
-          <Toaster position="top-right" richColors />
+          <Toaster position="top-right" richColors duration={3200} closeButton />
         </Providers>
       </body>
     </html>

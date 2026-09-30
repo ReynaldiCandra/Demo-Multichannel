@@ -947,3 +947,12 @@ h2 { font: 700 16px/1.2 var(--app-font-serif); letter-spacing: -.02em; }
 .image-preview-button .product-thumb-avatar { box-shadow: 0 0 0 2px hsl(var(--card)), 0 0 0 3px hsl(var(--border)); }
 .store-name-cell { display: flex; align-items: center; gap: 9px; }
 .store-name-cell strong { font-size: 11px; }
+
+/* ------------------------------------------------------------------ */
+/* Toast konfirmasi ala perbankan (sonner)                             */
+/* ------------------------------------------------------------------ */
+.toast-icon { flex-shrink: 0; }
+.toast-icon-good { color: hsl(169 43% 37%); }
+.toast-icon-danger { color: hsl(var(--destructive)); }
+[data-sonner-toast] { border-radius: 12px; font-size: 12px; font-weight: 600; }
+[data-sonner-toast] [data-icon] { display: inline-grid; place-items: center; }
