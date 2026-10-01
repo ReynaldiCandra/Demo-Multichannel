@@ -3,11 +3,13 @@
 import { Suspense, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -33,6 +35,12 @@ function LoginForm() {
       }
 
       const next = searchParams.get("next") || "/";
+      // Tulis identitas akun BARU ke cache sesi. Tanpa ini, cache React Query
+      // (staleTime 5 menit) masih menampilkan nama/email akun sebelumnya
+      // setelah logout → login dengan akun lain.
+      const body = (await res.json().catch(() => null)) as { user?: unknown } | null;
+      if (body?.user) queryClient.setQueryData(["session"], body.user);
+      else queryClient.invalidateQueries({ queryKey: ["session"] });
       router.push(next);
       router.refresh();
     } catch {

@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/format';
 import { useCrmAlerts, useListModules, useSession } from '@/lib/api/hooks';
+import { useQueryClient } from '@tanstack/react-query';
 import { isModuleVisible } from '@/lib/modules';
 import { NotificationBell } from '@/components/notification-bell';
 
@@ -192,10 +193,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const session = useSession();
   const modules = useListModules();
+  const queryClient = useQueryClient();
   const user = session.data;
 
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
+    // Kosongkan cache sesi supaya identitas akun lama tidak tertampil di
+    // sidebar saat akun berikutnya login (cache React Query tahan 5 menit).
+    await queryClient.invalidateQueries({ queryKey: ['session'] });
     router.push('/login');
     router.refresh();
   };
