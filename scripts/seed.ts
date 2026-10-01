@@ -65,10 +65,11 @@ async function seedUsers() {
 
   const ownerEmail = (process.env.SEED_OWNER_EMAIL ?? 'owner@websensial.com').toLowerCase();
   const ownerPassword = process.env.SEED_OWNER_PASSWORD ?? 'ubah-password-ini';
+  const ownerName = process.env.SEED_OWNER_NAME ?? 'Reynaldi Bgskr';
   const demoPassword = process.env.SEED_DEMO_PASSWORD ?? 'demo1234';
 
   await db.insert(usersTable).values([
-    { email: ownerEmail, passwordHash: await bcrypt.hash(ownerPassword, 10), name: 'Owner', role: 'owner' },
+    { email: ownerEmail, passwordHash: await bcrypt.hash(ownerPassword, 10), name: ownerName, role: 'owner' },
     { email: 'demo@websensial.com', passwordHash: await bcrypt.hash(demoPassword, 10), name: 'Akun Demo', role: 'demo' },
   ]);
 
