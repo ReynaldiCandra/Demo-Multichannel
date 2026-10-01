@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { db, usersTable } from '@/lib/db';
 import { badRequest, handler, parseBody } from '@/lib/server/http';
+import { clientIp, rateLimit } from '@/lib/server/rate-limit';
 import { createSessionToken, setSessionCookie, type Role } from '@/lib/server/session';
 
 export const dynamic = 'force-dynamic';
@@ -13,11 +14,31 @@ const LoginInput = z.object({
   password: z.string().min(1, 'Password wajib diisi'),
 });
 
+// Hardening pra-beta: perlambat brute-force. Per-email melindungi satu akun
+// dari serangan terarah; per-IP membatasi penyebaran ke banyak akun.
+const MAX_PER_EMAIL = 10;
+const MAX_PER_IP = 30;
+const WINDOW_MS = 10 * 60_000; // 10 menit
+
 export const POST = handler(async (request: Request) => {
   const parsed = await parseBody(request, LoginInput);
   if (!parsed.success) return badRequest(parsed.error);
 
   const email = parsed.data.email.trim().toLowerCase();
+  const ip = clientIp(request);
+
+  // Cek limit SEBELUM sentuh DB — dan tetap catat kegagalan berikutnya
+  // supaya penyerang tidak bisa mengaburkan hitungan dengan body sampah.
+  const perEmail = rateLimit(`login:email:${email}`, MAX_PER_EMAIL, WINDOW_MS);
+  const perIp = rateLimit(`login:ip:${ip}`, MAX_PER_IP, WINDOW_MS);
+  if (!perEmail.ok || !perIp.ok) {
+    const retry = Math.max(perEmail.ok ? 0 : perEmail.retryAfterSeconds, perIp.ok ? 0 : perIp.retryAfterSeconds);
+    return NextResponse.json(
+      { error: 'Terlalu banyak percobaan login. Coba lagi nanti.' },
+      { status: 429, headers: { 'Retry-After': String(retry) } },
+    );
+  }
+
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
 
   // Pesan sengaja dibuat sama untuk email salah maupun password salah, supaya

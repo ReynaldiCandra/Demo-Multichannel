@@ -149,11 +149,23 @@ pesan halus ("Masa trial berakhir — silakan berlangganan")
       insert yang merujuk data B → 404/400, laporan hanya menghitung data A.
       Catatan: modul Pengaturan masih global (pemisahan `workspace_modules` = fase
       4/5).
-- [ ] **Fase 4 — RLS per tenant**: `set_config('app.workspace_id')` per request +
+- [x] **Pra-beta (keputusan 2026-10-01)**: fase 4-5 ditunda sampai hasil uji
+      beta. Yang dikerjakan dulu:
+      1. `npm run provision -- --name "Nama Usaha" --email owner@doma.in` —
+         provisioning workspace + akun owner + akun demo + data contoh
+         generik dalam SATU transaksi (onboarding manual calon pelanggan
+         selesai dalam satu perintah; `--no-demo`/`--no-sample`/`--plan`).
+      2. Rate-limit login (`src/lib/server/rate-limit.ts`): 10 percobaan per
+         email + 30 per IP per 10 menit, 429 + `Retry-After`. In-memory per
+         proses — cukup untuk demo; ganti Redis bila nanti butuh ketat
+         lintas instance (fase 5).
+      Test baru: `tests/login-rate-limit.test.ts` (unit + integrasi: percobaan
+      ke-11 ditolak 429 walau password benar).
+- [ ] **Fase 4 — RLS per tenant** (setelah beta): `set_config('app.workspace_id')` per request +
       kebijakan RLS ketat; uji lewat psql langsung (tanpa GUC → 0 baris).
-- [ ] **Fase 5 — Register, trial & billing**: register + email verifikasi (Resend),
+- [ ] **Fase 5 — Register, trial & billing** (setelah beta): register + email verifikasi (Resend),
       provisioning workspace, plan/status/trial dijalankan, webhook Midtrans,
-      rate-limit login.
+      rate-limit login diganti penyimpanan bersama.
 
 ## 5. Rollout & rollback
 
@@ -171,7 +183,8 @@ pesan halus ("Masa trial berakhir — silakan berlangganan")
       `db.update`, `db.delete` di `src/app/api` & `src/lib/server`).
 - [x] ID dari URL selalu divalidasi UUID + milik workspace (404 bila bukan) —
       diuji otomatis oleh `tests/tenant-isolation.test.ts`.
-- [ ] Rate-limit login & register (fase 5).
+- [x] Rate-limit login (pra-beta: 10/email + 30/IP per 10 menit, in-memory);
+      rate-limit register menyusul bersama fitur register di fase 5.
 - [ ] Audit log per workspace (siapa mengubah apa) — tabel `audit_log` (opsional,
       fase 5+).
 - [ ] Upload blob: path diberi prefix `workspace/{id}/...` supaya URL tidak
