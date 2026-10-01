@@ -1,7 +1,7 @@
 'use client';
 
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, CircleAlert, Eye, Package, RefreshCw, X, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleAlert, Package, RefreshCw, X, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/format';
 
@@ -232,7 +232,6 @@ export function ImagePreviewButton({
           className={`product-thumb ${avatar ? 'product-thumb-avatar' : ''}`}
           loading="lazy"
         />
-        <span className="image-eye"><Eye size={13} /></span>
       </button>
       {open && (
         <Modal title={alt} onClose={() => setOpen(false)}>
