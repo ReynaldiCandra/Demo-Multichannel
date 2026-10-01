@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { db, productsTable, salesTable, storesTable } from '@/lib/db';
 import {
   badRequest,
@@ -7,8 +7,8 @@ import {
   handler,
   notFound,
   parsePatch,
-  requireWriteAccess,
 } from '@/lib/server/http';
+import { requireWorkspaceWrite, isResponse } from '@/lib/server/workspace';
 import { StoreInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
@@ -16,14 +16,16 @@ export const dynamic = 'force-dynamic';
 type Context = { params: Promise<{ storeId: string }> };
 
 export const PATCH = handler(async (request: Request, context: Context) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const { storeId } = await context.params;
   const parsed = await parsePatch(request, StoreInput.partial());
   if (!parsed.success) return badRequest(parsed.error);
 
   const { feePercent, imageUrl, ...rest } = parsed.data;
+  // Tenant di WHERE: store milik workspace lain tidak akan ketemu (404),
+  // bukan terbaca-terubah.
   const [store] = await db
     .update(storesTable)
     .set({
@@ -31,7 +33,7 @@ export const PATCH = handler(async (request: Request, context: Context) => {
       ...(feePercent === undefined ? {} : { feePercent: String(feePercent) }),
       ...(imageUrl === undefined ? {} : { imageUrl }),
     })
-    .where(eq(storesTable.id, storeId))
+    .where(and(eq(storesTable.id, storeId), eq(storesTable.workspaceId, ctx.workspaceId)))
     .returning();
 
   if (!store) return notFound('Toko tidak ditemukan');
@@ -43,7 +45,7 @@ export const PATCH = handler(async (request: Request, context: Context) => {
     .from(storesTable)
     .leftJoin(productsTable, eq(productsTable.storeId, storesTable.id))
     .leftJoin(salesTable, eq(salesTable.productId, productsTable.id))
-    .where(eq(storesTable.id, storeId));
+    .where(and(eq(storesTable.id, storeId), eq(storesTable.workspaceId, ctx.workspaceId)));
   if (!usage) return notFound('Toko tidak ditemukan');
   const { totalProducts, totalTransactions } = usage;
   return NextResponse.json({
@@ -55,8 +57,8 @@ export const PATCH = handler(async (request: Request, context: Context) => {
 });
 
 export const DELETE = handler(async (_request: Request, context: Context) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const { storeId } = await context.params;
   const [usage] = await db
@@ -67,7 +69,7 @@ export const DELETE = handler(async (_request: Request, context: Context) => {
     .from(storesTable)
     .leftJoin(productsTable, eq(productsTable.storeId, storesTable.id))
     .leftJoin(salesTable, eq(salesTable.productId, productsTable.id))
-    .where(eq(storesTable.id, storeId));
+    .where(and(eq(storesTable.id, storeId), eq(storesTable.workspaceId, ctx.workspaceId)));
   if (!usage) return notFound('Toko tidak ditemukan');
   const { totalProducts, totalTransactions } = usage;
 
@@ -81,7 +83,7 @@ export const DELETE = handler(async (_request: Request, context: Context) => {
 
   const [store] = await db
     .delete(storesTable)
-    .where(eq(storesTable.id, storeId))
+    .where(and(eq(storesTable.id, storeId), eq(storesTable.workspaceId, ctx.workspaceId)))
     .returning({ id: storesTable.id });
 
   if (!store) return notFound('Toko tidak ditemukan');

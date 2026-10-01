@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
-import { desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import {
   db,
   invoiceItemsTable,
   invoicePaymentsTable,
   invoicesTable,
 } from '@/lib/db';
-import { badRequest, conflict, handler, parseBody, requireWriteAccess } from '@/lib/server/http';
+import { badRequest, conflict, handler, parseBody } from '@/lib/server/http';
+import { isResponse, requireWorkspace, requireWorkspaceWrite } from '@/lib/server/workspace';
 import { InvoiceInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
@@ -14,10 +15,13 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /api/invoices
  *
- * Daftar ringkas semua invoice custom (Fase 6) + total tagihan dan
+ * Daftar ringkas invoice custom (Fase 6) milik workspace + total tagihan dan
  * pembayaran, supaya sisa tagihan bisa dibaca langsung dari daftar.
  */
 export const GET = handler(async () => {
+  const ctx = await requireWorkspace();
+  if (isResponse(ctx)) return ctx;
+
   const invoiceRows = await db
     .select({
       id: invoicesTable.id,
@@ -28,6 +32,7 @@ export const GET = handler(async () => {
       dueDate: invoicesTable.dueDate,
     })
     .from(invoicesTable)
+    .where(eq(invoicesTable.workspaceId, ctx.workspaceId))
     .orderBy(desc(invoicesTable.issueDate), desc(invoicesTable.createdAt));
 
   const itemTotals = await db
@@ -60,22 +65,27 @@ export const GET = handler(async () => {
 
 /**
  * POST /api/invoices — buat invoice baru beserta item & pembayaran awal.
- * Nomor invoice unik; duplikat ditolak dengan 409.
+ * Nomor invoice unik per workspace; duplikat ditolak dengan 409.
  */
 export const POST = handler(async (request: Request) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const parsed = await parseBody(request, InvoiceInput);
   if (!parsed.success) return badRequest(parsed.error);
   const input = parsed.data;
 
-  // Nomor invoice unik — cek eksplisit supaya pesannya jelas (409),
-  // bukan 500 dari unique violation.
+  // Nomor invoice unik per workspace — cek eksplisit supaya pesannya jelas
+  // (409), bukan 500 dari unique violation.
   const [duplicate] = await db
     .select({ id: invoicesTable.id })
     .from(invoicesTable)
-    .where(eq(invoicesTable.invoiceNumber, input.invoiceNumber))
+    .where(
+      and(
+        eq(invoicesTable.invoiceNumber, input.invoiceNumber),
+        eq(invoicesTable.workspaceId, ctx.workspaceId),
+      ),
+    )
     .limit(1);
   if (duplicate) {
     return conflict(`Nomor invoice ${input.invoiceNumber} sudah dipakai.`);
@@ -86,6 +96,7 @@ export const POST = handler(async (request: Request) => {
       const [invoice] = await tx
         .insert(invoicesTable)
         .values({
+          workspaceId: ctx.workspaceId,
           invoiceNumber: input.invoiceNumber,
           title: input.title,
           clientName: input.clientName,

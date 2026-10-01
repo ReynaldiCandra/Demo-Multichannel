@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server';
 import { asc, eq, sql } from 'drizzle-orm';
 import { db, productsTable, salesTable, storesTable } from '@/lib/db';
-import { badRequest, handler, parseBody, requireWriteAccess } from '@/lib/server/http';
+import { badRequest, handler, parseBody } from '@/lib/server/http';
+import { requireWorkspace, requireWorkspaceWrite, isResponse } from '@/lib/server/workspace';
 import { StoreInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
 
 export const GET = handler(async () => {
+  const ctx = await requireWorkspace();
+  if (isResponse(ctx)) return ctx;
+  const workspaceId = ctx.workspaceId;
+
   return NextResponse.json(
     await db
       .select({
@@ -22,6 +27,7 @@ export const GET = handler(async () => {
       .from(storesTable)
       .leftJoin(productsTable, eq(productsTable.storeId, storesTable.id))
       .leftJoin(salesTable, eq(salesTable.productId, productsTable.id))
+      .where(eq(storesTable.workspaceId, workspaceId))
       .groupBy(storesTable.id)
       .orderBy(asc(storesTable.name), asc(storesTable.channel))
       .then((stores) =>
@@ -36,15 +42,20 @@ export const GET = handler(async () => {
 });
 
 export const POST = handler(async (request: Request) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const parsed = await parseBody(request, StoreInput);
   if (!parsed.success) return badRequest(parsed.error);
 
+  // Tenant diambil dari sesi, bukan dari body — tidak bisa dipalsukan.
   const [store] = await db
     .insert(storesTable)
-    .values({ ...parsed.data, feePercent: String(parsed.data.feePercent) })
+    .values({
+      ...parsed.data,
+      feePercent: String(parsed.data.feePercent),
+      workspaceId: ctx.workspaceId,
+    })
     .returning();
   return NextResponse.json(
     { ...store, feePercent: Number(store.feePercent) || 0, productCount: 0, transactionCount: 0 },

@@ -140,10 +140,15 @@ pesan halus ("Masa trial berakhir — silakan berlangganan")
       (stores, suppliers, hosts, jobs, invoices, tasks, meta_ad_tests, crm_clients)
       + index + unique per-tenant untuk `stores` dan `invoices` + backfill. Aplikasi
       belum memfilter apa pun (scoping = fase 3).
-- [ ] **Fase 3 — Scoping aplikasi**: `requireWorkspace()` + refactor semua query
-      (dashboard, reports, POS, master, live, jobs, invoice, kanban, CRM, modules
-      → `workspace_modules`). Suite test PGlite ditambah test lintas-tenant
-      (user A TIDAK boleh membaca/mengubah data user B).
+- [x] **Fase 3 — Scoping aplikasi**: helper `requireWorkspace()` /
+      `requireWorkspaceWrite()` (gabungan guard tulis + penolakan role demo),
+      semua query di server lib (`dashboard.ts`, `reports.ts`) dan ~30 route API
+      difilter `workspace_id` dari sesi (tabel anak via parent-nya; INSERT selalu
+      set `workspaceId` dari sesi, bukan body). Test lintas-tenant baru
+      `tests/tenant-isolation.test.ts`: daftar/detail/edit/hapus ID tenant B → 404,
+      insert yang merujuk data B → 404/400, laporan hanya menghitung data A.
+      Catatan: modul Pengaturan masih global (pemisahan `workspace_modules` = fase
+      4/5).
 - [ ] **Fase 4 — RLS per tenant**: `set_config('app.workspace_id')` per request +
       kebijakan RLS ketat; uji lewat psql langsung (tanpa GUC → 0 baris).
 - [ ] **Fase 5 — Register, trial & billing**: register + email verifikasi (Resend),
@@ -160,9 +165,12 @@ pesan halus ("Masa trial berakhir — silakan berlangganan")
 
 ## 6. Checklist keamanan yang ikut ditegakkan
 
-- [ ] Query tanpa filter workspace tidak mungkin lolos code review: semua lewat
-      helper `tenantWhere` (grep audit: `db.select`, `db.insert`, `db.update`, `db.delete`).
-- [ ] ID dari URL selalu divalidasi UUID + milik workspace (404 bila bukan).
+- [x] Query tanpa filter workspace tidak mungkin lolos code review: semua route
+      lewat guard `requireWorkspace()` / `requireWorkspaceWrite()` dan memakai
+      `ctx.workspaceId` di setiap query (audit: `db.select`, `db.insert`,
+      `db.update`, `db.delete` di `src/app/api` & `src/lib/server`).
+- [x] ID dari URL selalu divalidasi UUID + milik workspace (404 bila bukan) —
+      diuji otomatis oleh `tests/tenant-isolation.test.ts`.
 - [ ] Rate-limit login & register (fase 5).
 - [ ] Audit log per workspace (siapa mengubah apa) — tabel `audit_log` (opsional,
       fase 5+).

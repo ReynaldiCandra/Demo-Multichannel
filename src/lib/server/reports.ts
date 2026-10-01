@@ -62,7 +62,10 @@ export type StorePerformanceReport = {
  * Toko tanpa penjualan tetap ikut tampil dengan nilai nol, supaya kanal yang
  * mandek kelihatan dan bukan hilang dari daftar.
  */
-export async function getStorePerformance(month?: string): Promise<StorePerformanceReport> {
+export async function getStorePerformance(
+  month?: string,
+  workspaceId?: string,
+): Promise<StorePerformanceReport> {
   const bounds = month ? monthBounds(month) : null;
 
   const revenueExpr = sql<number>`coalesce(sum(${salesTable.qty} * ${salesTable.actualPrice} - ${salesTable.discount}), 0)`;
@@ -94,6 +97,8 @@ export async function getStorePerformance(month?: string): Promise<StorePerforma
           )
         : and(eq(salesTable.productId, productsTable.id), eq(salesTable.status, 'selesai')),
     )
+    // Tenant: hanya toko milik workspace ini.
+    .where(workspaceId ? eq(storesTable.workspaceId, workspaceId) : undefined)
     .groupBy(storesTable.id, storesTable.name, storesTable.channel, storesTable.isActive)
     .orderBy(asc(storesTable.name), asc(storesTable.channel));
 
@@ -111,13 +116,13 @@ export async function getStorePerformance(month?: string): Promise<StorePerforma
     .innerJoin(productsTable, eq(salesTable.productId, productsTable.id))
     .innerJoin(storesTable, eq(productsTable.storeId, storesTable.id))
     .where(
-      bounds
-        ? and(
-            eq(salesTable.status, 'selesai'),
-            gte(salesTable.saleDate, bounds.start),
-            lt(salesTable.saleDate, bounds.end),
-          )
-        : eq(salesTable.status, 'selesai'),
+      and(
+        eq(salesTable.status, 'selesai'),
+        bounds ? gte(salesTable.saleDate, bounds.start) : undefined,
+        bounds ? lt(salesTable.saleDate, bounds.end) : undefined,
+        // Tenant: penjualan menurun ke products → stores.
+        workspaceId ? eq(storesTable.workspaceId, workspaceId) : undefined,
+      ),
     )
     .groupBy(productsTable.id, productsTable.name, storesTable.name, storesTable.channel)
     .orderBy(desc(sql`coalesce(sum(${salesTable.qty}), 0)`), desc(sql`coalesce(sum(${salesTable.qty} * ${salesTable.actualPrice} - ${salesTable.discount} - ${salesTable.qty} * ${salesTable.modalSnapshot} - ${salesTable.platformFee}), 0)`))
@@ -227,6 +232,8 @@ export type SalesReportFilters = {
   brand?: string | null;
   /** Satu kanal spesifik (satu baris di tabel stores). */
   storeId?: string | null;
+  /** Tenant filter (multi-tenant fase 3) — wajib dari pemanggil route API. */
+  workspaceId?: string | null;
   sort?: SalesReportSort;
   limit?: number;
 };
@@ -282,12 +289,17 @@ export type SalesReport = {
 // Cache singkat di memory proses menghilangkan query itu dari jalur cepat
 // tanpa membuat data toko baru butuh waktu lama untuk muncul.
 type StoreListRow = { id: string; name: string; channel: string; isActive: boolean };
-let storeListCache: { rows: StoreListRow[]; expiresAt: number } | null = null;
 const STORE_LIST_CACHE_MS = 15_000;
+/**
+ * Cache daftar toko PER WORKSPACE — cache global tunggal akan membocorkan
+ * daftar toko tenant lain ke pengguna berikutnya dalam 15 detik pertama.
+ */
+const storeListCache = new Map<string, { rows: StoreListRow[]; expiresAt: number }>();
 
-async function getStoreList(): Promise<StoreListRow[]> {
+async function getStoreList(workspaceId?: string): Promise<StoreListRow[]> {
   const now = Date.now();
-  if (storeListCache && storeListCache.expiresAt > now) return storeListCache.rows;
+  const cached = workspaceId ? storeListCache.get(workspaceId) : undefined;
+  if (cached && cached.expiresAt > now) return cached.rows;
   const rows = await db
     .select({
       id: storesTable.id,
@@ -296,8 +308,9 @@ async function getStoreList(): Promise<StoreListRow[]> {
       isActive: storesTable.isActive,
     })
     .from(storesTable)
+    .where(workspaceId ? eq(storesTable.workspaceId, workspaceId) : undefined)
     .orderBy(asc(storesTable.name), asc(storesTable.channel));
-  storeListCache = { rows, expiresAt: now + STORE_LIST_CACHE_MS };
+  if (workspaceId) storeListCache.set(workspaceId, { rows, expiresAt: now + STORE_LIST_CACHE_MS });
   return rows;
 }
 
@@ -354,6 +367,8 @@ export async function getSalesReport(filters: SalesReportFilters = {}): Promise<
     bounds ? lt(salesTable.saleDate, bounds.end) : undefined,
     filters.storeId ? eq(storesTable.id, filters.storeId) : undefined,
     filters.brand ? eq(storesTable.name, filters.brand) : undefined,
+    // Tenant: hanya penjualan lewat toko milik workspace ini.
+    filters.workspaceId ? eq(storesTable.workspaceId, filters.workspaceId) : undefined,
   ].filter((condition) => condition !== undefined);
   // Hanya pesanan selesai yang dihitung sebagai omzet dan profit.
   const where = and(...baseConditions, eq(salesTable.status, 'selesai'));
@@ -453,8 +468,8 @@ export async function getSalesReport(filters: SalesReportFilters = {}): Promise<
       .where(where)
       .groupBy(day)
       .orderBy(asc(day)),
-    // Daftar toko dari cache — tidak membuka koneksi baru selama masih segar.
-    getStoreList(),
+    // Daftar toko dari cache per workspace — tidak membuka koneksi baru selama masih segar.
+    getStoreList(filters.workspaceId ?? undefined),
   ]);
 
   const excludedFor = (status: string) => {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { and, asc, eq, gte, lt, sql } from 'drizzle-orm';
 import { db, productsTable, salesTable, settlementsTable, storesTable } from '@/lib/db';
 import { handler } from '@/lib/server/http';
+import { isResponse, requireWorkspace } from '@/lib/server/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,8 +21,12 @@ function nextMonthStart(month: string): string {
  * live dari penjualan SELESAI bulan itu − biaya platform, sehingga selalu
  * konsisten dengan ledger. Toko tanpa transaksi tetap tampil dengan angka 0;
  * toko tanpa baris settlement dianggap `pending`.
+ * Tenant: hanya toko milik workspace yang tampil.
  */
 export const GET = handler(async (request: Request) => {
+  const ctx = await requireWorkspace();
+  if (isResponse(ctx)) return ctx;
+
   const month = new URL(request.url).searchParams.get('month') ?? '';
   if (!MONTH.test(month)) {
     return NextResponse.json({ error: 'Format bulan harus YYYY-MM' }, { status: 400 });
@@ -59,6 +64,7 @@ export const GET = handler(async (request: Request) => {
       settlementsTable,
       and(eq(settlementsTable.storeId, storesTable.id), eq(settlementsTable.month, month)),
     )
+    .where(eq(storesTable.workspaceId, ctx.workspaceId))
     .groupBy(storesTable.id, settlementsTable.id)
     .orderBy(asc(storesTable.name), asc(storesTable.channel));
 

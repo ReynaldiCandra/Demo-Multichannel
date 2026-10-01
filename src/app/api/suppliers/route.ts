@@ -1,18 +1,22 @@
 import { NextResponse } from 'next/server';
-import { asc, eq, sql } from 'drizzle-orm';
-import { db, productsTable, salesTable, suppliersTable } from '@/lib/db';
-import { badRequest, handler, parseBody, requireWriteAccess } from '@/lib/server/http';
+import { and, asc, eq, sql } from 'drizzle-orm';
+import { db, productsTable, salesTable, storesTable, suppliersTable } from '@/lib/db';
+import { badRequest, handler, parseBody } from '@/lib/server/http';
+import { requireWorkspace, requireWorkspaceWrite, isResponse } from '@/lib/server/workspace';
 import { SupplierInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
 
 export const GET = handler(async () => {
+  const ctx = await requireWorkspace();
+  if (isResponse(ctx)) return ctx;
   // Jangan menggabungkan object supplier dengan GROUP BY agregasi produk.
   // PostgreSQL dapat menolak query itu (atau mengembalikan error saat schema
   // supplier berubah), sehingga halaman daftar supplier terlihat "tidak bisa dimuat".
   const supplierRows = await db
     .select()
     .from(suppliersTable)
+    .where(eq(suppliersTable.workspaceId, ctx.workspaceId))
     .orderBy(asc(suppliersTable.name));
 
   const productRows = await db
@@ -26,8 +30,15 @@ export const GET = handler(async () => {
       revenue: sql<string>`coalesce(sum(case when ${salesTable.status} = 'selesai' then ${salesTable.qty} * ${salesTable.actualPrice} - ${salesTable.discount} else 0 end), 0)`,
     })
     .from(productsTable)
+    .innerJoin(storesTable, eq(productsTable.storeId, storesTable.id))
     .leftJoin(salesTable, eq(salesTable.productId, productsTable.id))
-    .where(sql`${productsTable.supplierId} is not null`)
+    .where(
+      and(
+        sql`${productsTable.supplierId} is not null`,
+        // Tenant: hanya produk milik workspace ini.
+        eq(storesTable.workspaceId, ctx.workspaceId),
+      ),
+    )
     .groupBy(productsTable.id)
     .orderBy(asc(productsTable.name));
 
@@ -65,12 +76,15 @@ export const GET = handler(async () => {
 });
 
 export const POST = handler(async (request: Request) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const parsed = await parseBody(request, SupplierInput);
   if (!parsed.success) return badRequest(parsed.error);
 
-  const [supplier] = await db.insert(suppliersTable).values(parsed.data).returning();
+  const [supplier] = await db
+    .insert(suppliersTable)
+    .values({ ...parsed.data, workspaceId: ctx.workspaceId })
+    .returning();
   return NextResponse.json({ ...supplier, products: [] }, { status: 201 });
 });

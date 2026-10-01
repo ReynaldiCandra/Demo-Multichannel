@@ -1,17 +1,22 @@
 import { NextResponse } from 'next/server';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { db, crmClientsTable, crmProductsTable } from '@/lib/db';
-import { badRequest, handler, parseBody, requireWriteAccess } from '@/lib/server/http';
+import { badRequest, handler, parseBody } from '@/lib/server/http';
+import { isResponse, requireWorkspace, requireWorkspaceWrite } from '@/lib/server/workspace';
 import { CrmProductInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/crm/products?clientId=... — daftar produk iklan per klien.
- * Tanpa clientId: semua produk (dengan nama klien) untuk dropdown.
+ * GET /api/crm/products?clientId=... — daftar produk iklan per klien milik
+ * workspace. Tanpa clientId: semua produk (dengan nama klien) untuk dropdown.
  */
 export const GET = handler(async (request: Request) => {
+  const ctx = await requireWorkspace();
+  if (isResponse(ctx)) return ctx;
+
   const clientId = new URL(request.url).searchParams.get('clientId');
+  const tenant = eq(crmClientsTable.workspaceId, ctx.workspaceId);
 
   const rows = await db
     .select({
@@ -24,16 +29,20 @@ export const GET = handler(async (request: Request) => {
     })
     .from(crmProductsTable)
     .innerJoin(crmClientsTable, eq(crmProductsTable.clientId, crmClientsTable.id))
-    .where(clientId ? eq(crmProductsTable.clientId, clientId) : undefined)
+    .where(
+      clientId
+        ? and(tenant, eq(crmProductsTable.clientId, clientId))
+        : tenant,
+    )
     .orderBy(asc(crmProductsTable.name));
 
   return NextResponse.json(rows);
 });
 
-/** POST /api/crm/products — buat produk iklan milik satu klien. */
+/** POST /api/crm/products — buat produk iklan milik satu klien workspace ini. */
 export const POST = handler(async (request: Request) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const parsed = await parseBody(request, CrmProductInput);
   if (!parsed.success) return badRequest(parsed.error);
@@ -41,7 +50,9 @@ export const POST = handler(async (request: Request) => {
   const [client] = await db
     .select({ id: crmClientsTable.id })
     .from(crmClientsTable)
-    .where(eq(crmClientsTable.id, parsed.data.clientId))
+    .where(
+      and(eq(crmClientsTable.id, parsed.data.clientId), eq(crmClientsTable.workspaceId, ctx.workspaceId)),
+    )
     .limit(1);
   if (!client) {
     return NextResponse.json({ error: 'Klien tidak ditemukan.' }, { status: 400 });

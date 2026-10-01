@@ -7,6 +7,7 @@ import {
   monthKey,
 } from '@/lib/server/dashboard';
 import { handler } from '@/lib/server/http';
+import { isResponse, requireWorkspace } from '@/lib/server/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,16 +19,19 @@ function shiftMonth(month: string, count: number): string {
 const TREND_MONTHS = 6;
 
 /**
- * Ringkasan dashboard: hanya penjualan toko (marketplace).
+ * Ringkasan dashboard: hanya penjualan toko (marketplace) milik workspace ini.
  * Data freelance ada di halaman Jobs, rincian toko di halaman Analisa Toko.
  */
 export const GET = handler(async (request: Request) => {
+  const ctx = await requireWorkspace();
+  if (isResponse(ctx)) return ctx;
+
   const month = new URL(request.url).searchParams.get('month') ?? currentMonth();
   const bounds = monthBounds(month);
 
   const [trendRows, recentSales] = await Promise.all([
-    getPosTrendRows(shiftMonth(month, TREND_MONTHS - 1)),
-    getSalesWithLabels({ start: bounds.start, end: bounds.end, status: 'selesai', limit: 5 }),
+    getPosTrendRows(shiftMonth(month, TREND_MONTHS - 1), ctx.workspaceId),
+    getSalesWithLabels({ start: bounds.start, end: bounds.end, status: 'selesai', limit: 5, workspaceId: ctx.workspaceId }),
   ]);
 
   const current = trendRows.find((row) => monthKey(row.month) === month);

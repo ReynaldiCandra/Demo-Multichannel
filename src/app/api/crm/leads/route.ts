@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { and, desc, eq, inArray, lte, or, sql, isNull } from 'drizzle-orm';
 import { db, crmClientsTable, crmLeadsTable, crmProductsTable } from '@/lib/db';
-import { badRequest, handler, parseBody, requireWriteAccess } from '@/lib/server/http';
+import { badRequest, handler, parseBody } from '@/lib/server/http';
+import { isResponse, requireWorkspace, requireWorkspaceWrite } from '@/lib/server/workspace';
 import { CRM_LEAD_CATEGORIES, CrmLeadCreateInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
@@ -11,8 +12,13 @@ export const dynamic = 'force-dynamic';
  * Filter: clientId, productId, source, category, search (nama/HP/daerah),
  * due (1 = hanya yang follow-up-nya lewat/hari ini), limit.
  * `stats` = hitungan per kategori + daftar yang perlu follow-up.
+ * Tenant: semua query difilter ke klien milik workspace (leads adalah tabel
+ * anak dari crm_clients).
  */
 export const GET = handler(async (request: Request) => {
+  const ctx = await requireWorkspace();
+  if (isResponse(ctx)) return ctx;
+
   const params = new URL(request.url).searchParams;
   const clientId = params.get('clientId');
   const productId = params.get('productId');
@@ -22,7 +28,11 @@ export const GET = handler(async (request: Request) => {
   const due = params.get('due') === '1';
   const limit = Math.min(Number(params.get('limit')) || 500, 1000);
 
+  // Tenant: leads → klien, jadi cukup filter kolom workspace di crm_clients.
+  const tenant = eq(crmClientsTable.workspaceId, ctx.workspaceId);
+
   const filters = [
+    tenant,
     clientId ? eq(crmLeadsTable.clientId, clientId) : undefined,
     productId ? eq(crmLeadsTable.productId, productId) : undefined,
     source ? eq(crmLeadsTable.source, source) : undefined,
@@ -46,7 +56,7 @@ export const GET = handler(async (request: Request) => {
       : undefined,
   ].filter(Boolean);
 
-  const where = filters.length ? and(...filters) : undefined;
+  const where = and(...filters);
 
   const rows = await db
     .select({
@@ -79,8 +89,10 @@ export const GET = handler(async (request: Request) => {
       count: sql<number>`count(*)::int`,
     })
     .from(crmLeadsTable)
+    .innerJoin(crmClientsTable, eq(crmLeadsTable.clientId, crmClientsTable.id))
     .where(
       and(
+        tenant,
         clientId ? eq(crmLeadsTable.clientId, clientId) : undefined,
         productId ? eq(crmLeadsTable.productId, productId) : undefined,
         source ? eq(crmLeadsTable.source, source) : undefined,
@@ -105,6 +117,7 @@ export const GET = handler(async (request: Request) => {
     .innerJoin(crmClientsTable, eq(crmLeadsTable.clientId, crmClientsTable.id))
     .where(
       and(
+        tenant,
         sql`${crmLeadsTable.category} <> 'closing'`,
         or(lte(crmLeadsTable.followUpAt, sql`current_date`), isNull(crmLeadsTable.followUpAt)),
         clientId ? eq(crmLeadsTable.clientId, clientId) : undefined,
@@ -116,10 +129,10 @@ export const GET = handler(async (request: Request) => {
   return NextResponse.json({ leads: rows, counts, due: dueList });
 });
 
-/** POST /api/crm/leads — catat lead baru. */
+/** POST /api/crm/leads — catat lead baru (klien & produk wajib milik workspace). */
 export const POST = handler(async (request: Request) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const parsed = await parseBody(request, CrmLeadCreateInput);
   if (!parsed.success) return badRequest(parsed.error);
@@ -127,10 +140,26 @@ export const POST = handler(async (request: Request) => {
   const [client] = await db
     .select({ id: crmClientsTable.id })
     .from(crmClientsTable)
-    .where(eq(crmClientsTable.id, parsed.data.clientId))
+    .where(
+      and(eq(crmClientsTable.id, parsed.data.clientId), eq(crmClientsTable.workspaceId, ctx.workspaceId)),
+    )
     .limit(1);
   if (!client) {
     return NextResponse.json({ error: 'Klien tidak ditemukan.' }, { status: 400 });
+  }
+
+  if (parsed.data.productId) {
+    const [product] = await db
+      .select({ id: crmProductsTable.id })
+      .from(crmProductsTable)
+      .innerJoin(crmClientsTable, eq(crmProductsTable.clientId, crmClientsTable.id))
+      .where(
+        and(eq(crmProductsTable.id, parsed.data.productId), eq(crmClientsTable.workspaceId, ctx.workspaceId)),
+      )
+      .limit(1);
+    if (!product) {
+      return NextResponse.json({ error: 'Produk tidak ditemukan.' }, { status: 400 });
+    }
   }
 
   const [lead] = await db
@@ -151,10 +180,10 @@ export const POST = handler(async (request: Request) => {
   return NextResponse.json(lead, { status: 201 });
 });
 
-/** DELETE /api/crm/leads?ids=a,b,c — hapus massal (dipakai tabel). */
+/** DELETE /api/crm/leads?ids=a,b,c — hapus massal (hanya lead milik workspace). */
 export const DELETE = handler(async (request: Request) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const ids = new URL(request.url).searchParams.get('ids')?.split(',').filter(Boolean) ?? [];
   if (!ids.length) {
@@ -164,9 +193,20 @@ export const DELETE = handler(async (request: Request) => {
     return NextResponse.json({ error: 'ID tidak valid.' }, { status: 400 });
   }
 
+  // Saring dulu: hanya lead yang kliennya milik workspace ini yang boleh terhapus.
+  const owned = await db
+    .select({ id: crmLeadsTable.id })
+    .from(crmLeadsTable)
+    .innerJoin(crmClientsTable, eq(crmLeadsTable.clientId, crmClientsTable.id))
+    .where(and(inArray(crmLeadsTable.id, ids), eq(crmClientsTable.workspaceId, ctx.workspaceId)));
+
+  if (!owned.length) {
+    return NextResponse.json({ ok: true, deleted: 0 });
+  }
+
   const deleted = await db
     .delete(crmLeadsTable)
-    .where(inArray(crmLeadsTable.id, ids))
+    .where(inArray(crmLeadsTable.id, owned.map((row) => row.id)))
     .returning({ id: crmLeadsTable.id });
 
   return NextResponse.json({ ok: true, deleted: deleted.length });

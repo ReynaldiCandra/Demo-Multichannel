@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { count, eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { db, productsTable, salesTable, storesTable, suppliersTable } from '@/lib/db';
 import {
   badRequest,
@@ -7,8 +7,8 @@ import {
   handler,
   notFound,
   parsePatch,
-  requireWriteAccess,
 } from '@/lib/server/http';
+import { requireWorkspaceWrite, isResponse } from '@/lib/server/workspace';
 import { ProductInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
@@ -16,12 +16,20 @@ export const dynamic = 'force-dynamic';
 type Context = { params: Promise<{ productId: string }> };
 
 export const PATCH = handler(async (request: Request, context: Context) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const { productId } = await context.params;
   const parsed = await parsePatch(request, ProductInput.partial());
   if (!parsed.success) return badRequest(parsed.error);
+
+  // Cek kepemilikan lewat join ke stores (products tidak punya kolom workspace).
+  const [owned] = await db
+    .select({ id: productsTable.id })
+    .from(productsTable)
+    .innerJoin(storesTable, eq(productsTable.storeId, storesTable.id))
+    .where(and(eq(productsTable.id, productId), eq(storesTable.workspaceId, ctx.workspaceId)));
+  if (!owned) return notFound('Produk tidak ditemukan');
 
   const { targetMargin, supplierId, ...rest } = parsed.data;
   const supplier =
@@ -31,7 +39,12 @@ export const PATCH = handler(async (request: Request, context: Context) => {
           await db
             .select({ name: suppliersTable.name, whatsapp: suppliersTable.whatsapp })
             .from(suppliersTable)
-            .where(eq(suppliersTable.id, supplierId))
+            .where(
+              and(
+                eq(suppliersTable.id, supplierId),
+                eq(suppliersTable.workspaceId, ctx.workspaceId),
+              ),
+            )
         )[0];
   const [product] = await db
     .update(productsTable)
@@ -66,10 +79,18 @@ export const PATCH = handler(async (request: Request, context: Context) => {
 });
 
 export const DELETE = handler(async (_request: Request, context: Context) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const { productId } = await context.params;
+
+  const [owned] = await db
+    .select({ id: productsTable.id })
+    .from(productsTable)
+    .innerJoin(storesTable, eq(productsTable.storeId, storesTable.id))
+    .where(and(eq(productsTable.id, productId), eq(storesTable.workspaceId, ctx.workspaceId)));
+  if (!owned) return notFound('Produk tidak ditemukan');
+
   const [{ total }] = await db
     .select({ total: count() })
     .from(salesTable)

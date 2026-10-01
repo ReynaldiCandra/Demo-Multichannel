@@ -8,6 +8,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(root, 'src'),
+      // Modul "server-only" error di environment test (bukan React Server
+      // Component). Stub kosong: cukup agar import-nya tidak meledak.
+      'server-only': path.resolve(root, 'tests/stubs/server-only.ts'),
     },
   },
   test: {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSalesReport, type SalesReportSort } from '@/lib/server/reports';
 import { PERIOD_PATTERN } from '@/lib/server/validation';
 import { handler } from '@/lib/server/http';
+import { isResponse, requireWorkspace } from '@/lib/server/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,8 +18,12 @@ const SORTS: SalesReportSort[] = ['pcs', 'revenue', 'profit', 'margin'];
  *   brand   nama brand (gabungan semua kanal)
  *   storeId satu kanal spesifik
  *   sort    pcs (terlaris) | revenue (omzet) | profit | margin
+ * Tenant: hanya data lewat toko milik workspace ini.
  */
 export const GET = handler(async (request: Request) => {
+  const ctx = await requireWorkspace();
+  if (isResponse(ctx)) return ctx;
+
   const params = new URL(request.url).searchParams;
 
   const rawPeriod = params.get('period');
@@ -51,6 +56,7 @@ export const GET = handler(async (request: Request) => {
     brand: params.get('brand') || null,
     storeId,
     sort,
+    workspaceId: ctx.workspaceId,
   });
 
   return NextResponse.json(report);

@@ -10,6 +10,15 @@ vi.mock('@/lib/db', async () => {
   const s = await import('@/lib/db/schema');
   return { ...s, get db() { return (globalThis as unknown as { __testdb: typeof db }).__testdb; } };
 });
+vi.mock('@/lib/server/session', () => ({
+  getSession: async () => ({
+    id: 'u1',
+    email: 'o@x.id',
+    name: 'Owner',
+    role: 'owner',
+    workspaceId: '11111111-1111-1111-1111-111111111111',
+  }),
+}));
 
 describe('laporan penjualan (SQL diuji di Postgres in-memory)', () => {
   it('menghitung omzet, HPP, profit, pcs, peringkat produk, ledger, dan total job', async () => {
@@ -23,11 +32,14 @@ describe('laporan penjualan (SQL diuji di Postgres in-memory)', () => {
     for (const file of readdirSync('supabase/migrations').filter((name) => name.endsWith('.sql') && name !== '0000_init.sql').sort()) {
       await pg.exec(readFileSync(`supabase/migrations/${file}`, 'utf8'));
     }
+    // Workspace milik sesi test (claim workspaceId di mock session).
+    await pg.exec("insert into workspaces (id, name, slug) values ('11111111-1111-1111-1111-111111111111', 'WS Test', 'ws-test')");
     // migrasi harus aman dijalankan dua kali
     await pg.exec(readFileSync('supabase/migrations/0002_sales_status_order_fee.sql', 'utf8'));
-    const [a] = await db.insert(schema.storesTable).values({ name: 'Rise & Wars', channel: 'Shopee' }).returning();
-    const [b] = await db.insert(schema.storesTable).values({ name: 'Rise & Wars', channel: 'TikTok' }).returning();
-    const [c] = await db.insert(schema.storesTable).values({ name: 'Sora', channel: 'Shopee' }).returning();
+    const ws = '11111111-1111-1111-1111-111111111111';
+    const [a] = await db.insert(schema.storesTable).values({ workspaceId: ws, name: 'Rise & Wars', channel: 'Shopee' }).returning();
+    const [b] = await db.insert(schema.storesTable).values({ workspaceId: ws, name: 'Rise & Wars', channel: 'TikTok' }).returning();
+    const [c] = await db.insert(schema.storesTable).values({ workspaceId: ws, name: 'Sora', channel: 'Shopee' }).returning();
     const [p1] = await db.insert(schema.productsTable).values({ storeId: a.id, name: 'Kaos', modal: 50000 }).returning();
     const [p2] = await db.insert(schema.productsTable).values({ storeId: b.id, name: 'Topi', modal: 20000 }).returning();
     const [p3] = await db.insert(schema.productsTable).values({ storeId: c.id, name: 'Tas', modal: 100000 }).returning();
@@ -64,7 +76,7 @@ describe('laporan penjualan (SQL diuji di Postgres in-memory)', () => {
     expect(brand.daily.map((d) => d.date)).toEqual(['2026-09-02', '2026-09-03']);
 
     // ledger per bulan + total job dihitung di database
-    const [job] = await db.insert(schema.jobsTable).values({ clientName: 'X', jobType: 'Ads', startDate: '2026-09-01', contractValue: 1000000 }).returning();
+    const [job] = await db.insert(schema.jobsTable).values({ workspaceId: ws, clientName: 'X', jobType: 'Ads', startDate: '2026-09-01', contractValue: 1000000 }).returning();
     await db.insert(schema.jobPaymentsTable).values({ jobId: job.id, paymentDate: '2026-09-05', amount: 400000, type: 'dp' });
     await db.insert(schema.jobCostsTable).values({ jobId: job.id, costDate: '2026-09-06', description: 'iklan', amount: 100000 });
     const { getLedgerRows, getJobTotals, autoPlatformFee } = await import('@/lib/server/dashboard');

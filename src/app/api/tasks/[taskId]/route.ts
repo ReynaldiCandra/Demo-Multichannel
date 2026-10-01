@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db, tasksTable } from '@/lib/db';
-import { badRequest, handler, notFound, parseBody, requireWriteAccess } from '@/lib/server/http';
+import { badRequest, handler, notFound, parseBody } from '@/lib/server/http';
+import { isResponse, requireWorkspaceWrite } from '@/lib/server/workspace';
 import { TaskUpdateInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
@@ -16,8 +17,8 @@ type Context = { params: Promise<{ taskId: string }> };
  * status berubah ke done dan dikosongkan saat keluar dari done.
  */
 export const PATCH = handler(async (request: Request, context: Context) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const { taskId } = await context.params;
   if (!UUID.test(taskId)) {
@@ -27,10 +28,11 @@ export const PATCH = handler(async (request: Request, context: Context) => {
   const parsed = await parseBody(request, TaskUpdateInput);
   if (!parsed.success) return badRequest(parsed.error);
 
+  const scope = and(eq(tasksTable.id, taskId), eq(tasksTable.workspaceId, ctx.workspaceId));
   const [existing] = await db
     .select()
     .from(tasksTable)
-    .where(eq(tasksTable.id, taskId))
+    .where(scope)
     .limit(1);
   if (!existing) return notFound('Tugas tidak ditemukan.');
 
@@ -53,23 +55,27 @@ export const PATCH = handler(async (request: Request, context: Context) => {
       }),
       updatedAt: now,
     })
-    .where(eq(tasksTable.id, taskId))
+    .where(scope)
     .returning();
 
+  if (!task) return notFound('Tugas tidak ditemukan.');
   return NextResponse.json({ ...task, completedAt: task.completedAt?.toISOString() ?? null });
 });
 
 /** DELETE /api/tasks/[taskId] — hapus kartu. */
 export const DELETE = handler(async (_request: Request, context: Context) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const { taskId } = await context.params;
   if (!UUID.test(taskId)) {
     return NextResponse.json({ error: 'taskId tidak valid' }, { status: 400 });
   }
 
-  const [deleted] = await db.delete(tasksTable).where(eq(tasksTable.id, taskId)).returning();
+  const [deleted] = await db
+    .delete(tasksTable)
+    .where(and(eq(tasksTable.id, taskId), eq(tasksTable.workspaceId, ctx.workspaceId)))
+    .returning();
   if (!deleted) return notFound('Tugas tidak ditemukan.');
 
   return NextResponse.json({ ok: true });

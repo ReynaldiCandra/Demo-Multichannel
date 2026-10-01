@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { count, eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { db, hostsTable, liveSessionsTable } from '@/lib/db';
-import { badRequest, conflict, handler, notFound, parsePatch, requireWriteAccess } from '@/lib/server/http';
+import { badRequest, conflict, handler, notFound, parsePatch } from '@/lib/server/http';
+import { isResponse, requireWorkspaceWrite } from '@/lib/server/workspace';
 import { HostInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
@@ -9,8 +10,8 @@ export const dynamic = 'force-dynamic';
 type Context = { params: Promise<{ hostId: string }> };
 
 export const PATCH = handler(async (request: Request, context: Context) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const { hostId } = await context.params;
   const parsed = await parsePatch(request, HostInput.partial());
@@ -19,7 +20,7 @@ export const PATCH = handler(async (request: Request, context: Context) => {
   const [host] = await db
     .update(hostsTable)
     .set(parsed.data)
-    .where(eq(hostsTable.id, hostId))
+    .where(and(eq(hostsTable.id, hostId), eq(hostsTable.workspaceId, ctx.workspaceId)))
     .returning();
 
   if (!host) return notFound('Host tidak ditemukan');
@@ -27,10 +28,12 @@ export const PATCH = handler(async (request: Request, context: Context) => {
 });
 
 export const DELETE = handler(async (_request: Request, context: Context) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const { hostId } = await context.params;
+  // live_sessions adalah tabel anak (tanpa workspace_id) — cukup hitung via
+  // hostId; host-nya sendiri sudah diverifikasi milik workspace di bawah.
   const [{ total }] = await db
     .select({ total: count() })
     .from(liveSessionsTable)
@@ -42,7 +45,7 @@ export const DELETE = handler(async (_request: Request, context: Context) => {
 
   const [host] = await db
     .delete(hostsTable)
-    .where(eq(hostsTable.id, hostId))
+    .where(and(eq(hostsTable.id, hostId), eq(hostsTable.workspaceId, ctx.workspaceId)))
     .returning({ id: hostsTable.id });
 
   if (!host) return notFound('Host tidak ditemukan');

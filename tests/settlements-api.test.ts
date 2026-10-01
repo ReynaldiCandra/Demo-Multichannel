@@ -13,7 +13,13 @@ vi.mock('@/lib/db', async () => {
   return { ...s, get db() { return (globalThis as unknown as Holder).__testdb; } };
 });
 vi.mock('@/lib/server/session', () => ({
-  getSession: async () => ({ id: 'u1', email: 'o@x.id', name: 'Owner', role: 'owner' }),
+  getSession: async () => ({
+    id: 'u1',
+    email: 'o@x.id',
+    name: 'Owner',
+    role: 'owner',
+    workspaceId: '11111111-1111-1111-1111-111111111111',
+  }),
 }));
 
 const jsonRequest = (method: string, body: unknown, query = '') =>
@@ -34,10 +40,12 @@ describe('API settlement: status pencairan per toko per bulan', () => {
     for (const file of readdirSync('supabase/migrations').filter((name) => name.endsWith('.sql') && name !== '0000_init.sql').sort()) {
       await pg.exec(readFileSync(`supabase/migrations/${file}`, 'utf8'));
     }
+    // Workspace milik sesi test (claim workspaceId di mock session).
+    await pg.exec("insert into workspaces (id, name, slug) values ('11111111-1111-1111-1111-111111111111', 'WS Test', 'ws-test')");
 
     const [store] = await db
       .insert(schema.storesTable)
-      .values({ name: 'Rise & Wars', channel: 'Shopee', feePercent: '10.00' })
+      .values({ workspaceId: '11111111-1111-1111-1111-111111111111', name: 'Rise & Wars', channel: 'Shopee', feePercent: '10.00' })
       .returning();
     const [product] = await db
       .insert(schema.productsTable)

@@ -1,26 +1,36 @@
 import { NextResponse } from 'next/server';
-import { asc, count, eq } from 'drizzle-orm';
+import { and, asc, count, eq } from 'drizzle-orm';
 import { db, crmClientsTable, crmLeadsTable, crmProductsTable } from '@/lib/db';
-import { badRequest, handler, parseBody, requireWriteAccess } from '@/lib/server/http';
+import { badRequest, handler, parseBody } from '@/lib/server/http';
+import { isResponse, requireWorkspace, requireWorkspaceWrite } from '@/lib/server/workspace';
 import { CrmClientInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/crm/clients — daftar klien CRM + hitungan produk & leads.
- * Hitungan diambil dengan group-by terpisah lalu digabung di JS (bukan
- * subquery berkorelasi) supaya stabil di semua driver Postgres.
+ * GET /api/crm/clients — daftar klien CRM milik workspace + hitungan produk
+ * & leads. Hitungan diambil dengan group-by terpisah lalu digabung di JS
+ * (bukan subquery berkorelasi) supaya stabil di semua driver Postgres.
  */
 export const GET = handler(async () => {
+  const ctx = await requireWorkspace();
+  if (isResponse(ctx)) return ctx;
+
+  const tenant = eq(crmClientsTable.workspaceId, ctx.workspaceId);
+
   const [clients, productCounts, leadCounts] = await Promise.all([
-    db.select().from(crmClientsTable).orderBy(asc(crmClientsTable.name)),
+    db.select().from(crmClientsTable).where(tenant).orderBy(asc(crmClientsTable.name)),
     db
       .select({ clientId: crmProductsTable.clientId, total: count() })
       .from(crmProductsTable)
+      .innerJoin(crmClientsTable, eq(crmProductsTable.clientId, crmClientsTable.id))
+      .where(tenant)
       .groupBy(crmProductsTable.clientId),
     db
       .select({ clientId: crmLeadsTable.clientId, total: count() })
       .from(crmLeadsTable)
+      .innerJoin(crmClientsTable, eq(crmLeadsTable.clientId, crmClientsTable.id))
+      .where(tenant)
       .groupBy(crmLeadsTable.clientId),
   ]);
 
@@ -36,14 +46,17 @@ export const GET = handler(async () => {
   );
 });
 
-/** POST /api/crm/clients — buat klien baru. */
+/** POST /api/crm/clients — buat klien baru di workspace ini. */
 export const POST = handler(async (request: Request) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const parsed = await parseBody(request, CrmClientInput);
   if (!parsed.success) return badRequest(parsed.error);
 
-  const [client] = await db.insert(crmClientsTable).values(parsed.data).returning();
+  const [client] = await db
+    .insert(crmClientsTable)
+    .values({ ...parsed.data, workspaceId: ctx.workspaceId })
+    .returning();
   return NextResponse.json(client, { status: 201 });
 });

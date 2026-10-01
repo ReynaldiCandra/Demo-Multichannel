@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db, metaAdTestsTable } from '@/lib/db';
 import { dateOnly, todayJakarta } from '@/lib/server/dashboard';
-import { badRequest, handler, notFound, parsePatch, requireWriteAccess } from '@/lib/server/http';
+import { badRequest, handler, notFound, parsePatch } from '@/lib/server/http';
+import { isResponse, requireWorkspaceWrite } from '@/lib/server/workspace';
 import { MetaAdTestInput } from '@/lib/server/validation';
 import { serializeMetaAdTest } from '@/lib/server/serializers';
 
@@ -11,8 +12,8 @@ export const dynamic = 'force-dynamic';
 type Context = { params: Promise<{ metaAdTestId: string }> };
 
 export const PATCH = handler(async (request: Request, context: Context) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const { metaAdTestId } = await context.params;
   const parsed = await parsePatch(request, MetaAdTestInput.partial());
@@ -27,7 +28,7 @@ export const PATCH = handler(async (request: Request, context: Context) => {
       ...(endDate === undefined ? {} : { endDate: dateOnly(endDate) }),
       lastUpdated: todayJakarta(),
     })
-    .where(eq(metaAdTestsTable.id, metaAdTestId))
+    .where(and(eq(metaAdTestsTable.id, metaAdTestId), eq(metaAdTestsTable.workspaceId, ctx.workspaceId)))
     .returning();
 
   if (!test) return notFound('Tes Meta Ads tidak ditemukan');
@@ -35,13 +36,13 @@ export const PATCH = handler(async (request: Request, context: Context) => {
 });
 
 export const DELETE = handler(async (_request: Request, context: Context) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const { metaAdTestId } = await context.params;
   const [test] = await db
     .delete(metaAdTestsTable)
-    .where(eq(metaAdTestsTable.id, metaAdTestId))
+    .where(and(eq(metaAdTestsTable.id, metaAdTestId), eq(metaAdTestsTable.workspaceId, ctx.workspaceId)))
     .returning({ id: metaAdTestsTable.id });
 
   if (!test) return notFound('Tes Meta Ads tidak ditemukan');

@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import {
   db,
   invoiceItemsTable,
   invoicePaymentsTable,
   invoicesTable,
 } from '@/lib/db';
-import { badRequest, conflict, handler, notFound, parseBody, requireWriteAccess } from '@/lib/server/http';
+import { badRequest, conflict, handler, notFound, parseBody } from '@/lib/server/http';
+import { isResponse, requireWorkspace, requireWorkspaceWrite } from '@/lib/server/workspace';
 import { InvoiceInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
@@ -18,8 +19,12 @@ type Context = { params: Promise<{ invoiceId: string }> };
 /**
  * GET /api/invoices/[invoiceId] — detail lengkap untuk halaman cetak:
  * field custom + item (amount dihitung server) + riwayat pembayaran.
+ * Tenant: invoice workspace lain → 404.
  */
 export const GET = handler(async (_request: Request, context: Context) => {
+  const ctx = await requireWorkspace();
+  if (isResponse(ctx)) return ctx;
+
   const { invoiceId } = await context.params;
   if (!UUID.test(invoiceId)) {
     return NextResponse.json({ error: 'invoiceId tidak valid' }, { status: 400 });
@@ -28,7 +33,7 @@ export const GET = handler(async (_request: Request, context: Context) => {
   const [invoice] = await db
     .select()
     .from(invoicesTable)
-    .where(eq(invoicesTable.id, invoiceId))
+    .where(and(eq(invoicesTable.id, invoiceId), eq(invoicesTable.workspaceId, ctx.workspaceId)))
     .limit(1);
   if (!invoice) return notFound('Invoice tidak ditemukan.');
 
@@ -67,8 +72,8 @@ export const GET = handler(async (_request: Request, context: Context) => {
  * tidak ikut terkirim akan dihapus.
  */
 export const PATCH = handler(async (request: Request, context: Context) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const { invoiceId } = await context.params;
   if (!UUID.test(invoiceId)) {
@@ -79,15 +84,28 @@ export const PATCH = handler(async (request: Request, context: Context) => {
   if (!parsed.success) return badRequest(parsed.error);
   const input = parsed.data;
 
-  // Nomor invoice tidak boleh dipakai invoice lain (409 dengan pesan jelas).
+  // Nomor invoice tidak boleh dipakai invoice lain di workspace ini (409).
   const [duplicate] = await db
     .select({ id: invoicesTable.id })
     .from(invoicesTable)
-    .where(eq(invoicesTable.invoiceNumber, input.invoiceNumber))
+    .where(
+      and(
+        eq(invoicesTable.invoiceNumber, input.invoiceNumber),
+        eq(invoicesTable.workspaceId, ctx.workspaceId),
+      ),
+    )
     .limit(1);
   if (duplicate && duplicate.id !== invoiceId) {
     return conflict(`Nomor invoice ${input.invoiceNumber} sudah dipakai invoice lain.`);
   }
+
+  // Verifikasi kepemilikan tenant SEBELUM transaksi (idempoten & jelas 404).
+  const [owned] = await db
+    .select({ id: invoicesTable.id })
+    .from(invoicesTable)
+    .where(and(eq(invoicesTable.id, invoiceId), eq(invoicesTable.workspaceId, ctx.workspaceId)))
+    .limit(1);
+  if (!owned) return notFound('Invoice tidak ditemukan.');
 
   try {
     await db.transaction(async (tx) => {
@@ -150,8 +168,8 @@ export const PATCH = handler(async (request: Request, context: Context) => {
 
 /** DELETE /api/invoices/[invoiceId] — hapus invoice beserta item & pembayaran. */
 export const DELETE = handler(async (_request: Request, context: Context) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const { invoiceId } = await context.params;
   if (!UUID.test(invoiceId)) {
@@ -160,7 +178,7 @@ export const DELETE = handler(async (_request: Request, context: Context) => {
 
   const [deleted] = await db
     .delete(invoicesTable)
-    .where(eq(invoicesTable.id, invoiceId))
+    .where(and(eq(invoicesTable.id, invoiceId), eq(invoicesTable.workspaceId, ctx.workspaceId)))
     .returning();
   if (!deleted) return notFound('Invoice tidak ditemukan.');
 

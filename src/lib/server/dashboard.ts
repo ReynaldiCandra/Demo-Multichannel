@@ -81,12 +81,17 @@ export function dateOnly(value: string | Date | null | undefined): string | null
 }
 
 /** Job beserta seluruh rincian pembayaran & biaya. Beri `jobId` untuk satu job saja. */
-export async function getJobFinancials(jobId?: string) {
+export async function getJobFinancials(jobId?: string, workspaceId?: string) {
   const [jobs, payments, costs] = await Promise.all([
     db
       .select()
       .from(jobsTable)
-      .where(jobId ? eq(jobsTable.id, jobId) : undefined)
+      .where(
+        and(
+          jobId ? eq(jobsTable.id, jobId) : undefined,
+          workspaceId ? eq(jobsTable.workspaceId, workspaceId) : undefined,
+        ),
+      )
       .orderBy(desc(jobsTable.startDate)),
     db
       .select()
@@ -148,6 +153,8 @@ export async function getSalesWithLabels(
     storeId?: string;
     status?: string;
     limit?: number;
+    /** Tenant filter (multi-tenant fase 3) — wajib dari pemanggil route API. */
+    workspaceId?: string;
   } = {},
 ) {
   const conditions = [];
@@ -156,6 +163,8 @@ export async function getSalesWithLabels(
   if (options.start) conditions.push(gte(salesTable.saleDate, options.start));
   if (options.end) conditions.push(lt(salesTable.saleDate, options.end));
   if (options.storeId) conditions.push(eq(productsTable.storeId, options.storeId));
+  // Tenant: sales menurun ke products → stores, jadi cukup filter kolom workspace stores.
+  if (options.workspaceId) conditions.push(eq(storesTable.workspaceId, options.workspaceId));
 
   const query = db
     .select({
@@ -198,7 +207,7 @@ export async function getSalesWithLabels(
  * Ringkasan pekerjaan + total bayar/biaya, dihitung di database.
  * Dipakai dashboard supaya tidak perlu memuat semua baris pembayaran dan biaya.
  */
-export async function getJobTotals(): Promise<JobFinancial[]> {
+export async function getJobTotals(workspaceId?: string): Promise<JobFinancial[]> {
   const rows = await db
     .select({
       job: jobsTable,
@@ -208,6 +217,7 @@ export async function getJobTotals(): Promise<JobFinancial[]> {
       totalCost: sql<string>`coalesce((select sum(jc.amount) from job_costs jc where jc.job_id = jobs.id), 0)`,
     })
     .from(jobsTable)
+    .where(workspaceId ? eq(jobsTable.workspaceId, workspaceId) : undefined)
     .orderBy(desc(jobsTable.startDate));
 
   return rows.map((row) => ({
@@ -224,7 +234,7 @@ export async function getJobTotals(): Promise<JobFinancial[]> {
  * dikirim ke server hanya beberapa baris — bukan seluruh tabel penjualan.
  * `sinceMonth` (format YYYY-MM) membatasi ke bulan tersebut dan sesudahnya.
  */
-export async function getLedgerRows(sinceMonth?: string) {
+export async function getLedgerRows(sinceMonth?: string, workspaceId?: string) {
   const since = sinceMonth ? `${sinceMonth}-01` : null;
 
   const saleMonth = sql<string>`to_char(${salesTable.saleDate}, 'YYYY-MM')`;
@@ -239,17 +249,38 @@ export async function getLedgerRows(sinceMonth?: string) {
         cost: sql<string>`coalesce(sum(${salesTable.qty} * ${salesTable.modalSnapshot} + ${salesTable.platformFee}), 0)`,
       })
       .from(salesTable)
-      .where(and(eq(salesTable.status, 'selesai'), since ? gte(salesTable.saleDate, since) : undefined))
+      .innerJoin(productsTable, eq(salesTable.productId, productsTable.id))
+      .innerJoin(storesTable, eq(productsTable.storeId, storesTable.id))
+      .where(
+        and(
+          eq(salesTable.status, 'selesai'),
+          since ? gte(salesTable.saleDate, since) : undefined,
+          // Tenant: sales menurun ke products → stores.
+          workspaceId ? eq(storesTable.workspaceId, workspaceId) : undefined,
+        ),
+      )
       .groupBy(saleMonth),
     db
       .select({ month: paymentMonth, total: sql<string>`coalesce(sum(${jobPaymentsTable.amount}), 0)` })
       .from(jobPaymentsTable)
-      .where(since ? gte(jobPaymentsTable.paymentDate, since) : undefined)
+      .innerJoin(jobsTable, eq(jobPaymentsTable.jobId, jobsTable.id))
+      .where(
+        and(
+          since ? gte(jobPaymentsTable.paymentDate, since) : undefined,
+          workspaceId ? eq(jobsTable.workspaceId, workspaceId) : undefined,
+        ),
+      )
       .groupBy(paymentMonth),
     db
       .select({ month: costMonth, total: sql<string>`coalesce(sum(${jobCostsTable.amount}), 0)` })
       .from(jobCostsTable)
-      .where(since ? gte(jobCostsTable.costDate, since) : undefined)
+      .innerJoin(jobsTable, eq(jobCostsTable.jobId, jobsTable.id))
+      .where(
+        and(
+          since ? gte(jobCostsTable.costDate, since) : undefined,
+          workspaceId ? eq(jobsTable.workspaceId, workspaceId) : undefined,
+        ),
+      )
       .groupBy(costMonth),
   ]);
 
@@ -288,7 +319,11 @@ export async function getLedgerRows(sinceMonth?: string) {
     }));
 }
 
-export async function getProductsWithStores(activeOnly = true, storeId?: string | null) {
+export async function getProductsWithStores(
+  activeOnly = true,
+  storeId?: string | null,
+  workspaceId?: string,
+) {
   const rows = await db
     .select({
       product: productsTable,
@@ -311,6 +346,8 @@ export async function getProductsWithStores(activeOnly = true, storeId?: string 
       and(
         activeOnly ? eq(productsTable.isActive, true) : undefined,
         storeId ? eq(productsTable.storeId, storeId) : undefined,
+        // Tenant: products menurun ke stores.
+        workspaceId ? eq(storesTable.workspaceId, workspaceId) : undefined,
       ),
     )
     .groupBy(
@@ -377,7 +414,7 @@ export function monthRangeFilter(month?: string) {
  * hanya membutuhkan penjualan toko. Agregasi langsung di database membuat
  * dashboard tidak memuat tabel yang tidak dipakai.
  */
-export async function getPosTrendRows(sinceMonth: string) {
+export async function getPosTrendRows(sinceMonth: string, workspaceId?: string) {
   const since = `${sinceMonth}-01`;
   const month = sql<string>`to_char(${salesTable.saleDate}, 'YYYY-MM')`;
   const rows = await db
@@ -387,7 +424,16 @@ export async function getPosTrendRows(sinceMonth: string) {
       profit: sql<string>`coalesce(sum(${salesTable.qty} * ${salesTable.actualPrice} - ${salesTable.discount} - ${salesTable.qty} * ${salesTable.modalSnapshot} - ${salesTable.platformFee}), 0)`,
     })
     .from(salesTable)
-    .where(and(eq(salesTable.status, 'selesai'), gte(salesTable.saleDate, since)))
+    .innerJoin(productsTable, eq(salesTable.productId, productsTable.id))
+    .innerJoin(storesTable, eq(productsTable.storeId, storesTable.id))
+    .where(
+      and(
+        eq(salesTable.status, 'selesai'),
+        gte(salesTable.saleDate, since),
+        // Tenant: sales menurun ke products → stores.
+        workspaceId ? eq(storesTable.workspaceId, workspaceId) : undefined,
+      ),
+    )
     .groupBy(month);
 
   return rows.map((row) => ({

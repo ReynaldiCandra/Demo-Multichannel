@@ -13,13 +13,15 @@ import {
   handler,
   notFound,
   parseBody,
-  requireWriteAccess,
 } from '@/lib/server/http';
+import { requireWorkspace, requireWorkspaceWrite, isResponse } from '@/lib/server/workspace';
 import { SaleInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
 
 export const GET = handler(async (request: Request) => {
+  const ctx = await requireWorkspace();
+  if (isResponse(ctx)) return ctx;
   const params = new URL(request.url).searchParams;
   const month = params.get('month');
   const storeId = params.get('storeId');
@@ -38,24 +40,28 @@ export const GET = handler(async (request: Request) => {
     storeId: storeId ?? undefined,
     status: status ?? undefined,
     limit,
+    workspaceId: ctx.workspaceId,
   });
 
   return NextResponse.json(sales);
 });
 
 export const POST = handler(async (request: Request) => {
-  const denied = await requireWriteAccess();
-  if (denied) return denied;
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
 
   const parsed = await parseBody(request, SaleInput);
   if (!parsed.success) return badRequest(parsed.error);
   const input = parsed.data;
 
+  // Produk harus milik workspace ini (join ke stores untuk filter tenant).
   const [row] = await db
     .select({ product: productsTable, feePercent: storesTable.feePercent })
     .from(productsTable)
     .innerJoin(storesTable, eq(productsTable.storeId, storesTable.id))
-    .where(eq(productsTable.id, input.productId));
+    .where(
+      and(eq(productsTable.id, input.productId), eq(storesTable.workspaceId, ctx.workspaceId)),
+    );
   if (!row) return notFound('Produk tidak ditemukan');
 
   // Nomor pesanan yang sama untuk produk yang sama = kemungkinan input ganda.
@@ -98,6 +104,6 @@ export const POST = handler(async (request: Request) => {
     })
     .returning({ id: salesTable.id });
 
-  const [created] = await getSalesWithLabels({ id: sale.id });
+  const [created] = await getSalesWithLabels({ id: sale.id, workspaceId: ctx.workspaceId });
   return NextResponse.json(created, { status: 201 });
 });
