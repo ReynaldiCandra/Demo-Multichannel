@@ -890,7 +890,14 @@ export function useDeleteCrmLead(options?: MutationOpts<unknown, { leadId: strin
 /* sesi login                                                          */
 /* ------------------------------------------------------------------ */
 
-export type SessionUser = { id: string; email: string; name: string; role: 'owner' | 'demo' };
+export type SessionUser = {
+  id: string;
+  email: string;
+  name: string;
+  role: 'owner' | 'demo';
+  /** Tenant user (multi-tenant fase 1) — tampil di /api/auth/me. */
+  workspaceId?: string;
+};
 
 /**
  * Satu-satunya tempat membaca sesi. Sebelumnya AppShell dan halaman Pengaturan

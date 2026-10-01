@@ -39,6 +39,8 @@ export const POST = handler(async (request: Request) => {
     email: user.email,
     name: user.name,
     role: (user.role === 'demo' ? 'demo' : 'owner') as Role,
+    // Tenant disertakan di token supaya fase 3 bisa scoping query per workspace.
+    workspaceId: user.workspaceId ?? undefined,
   };
 
   await setSessionCookie(await createSessionToken(sessionUser));

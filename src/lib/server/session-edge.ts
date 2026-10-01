@@ -9,6 +9,12 @@ export type SessionUser = {
   email: string;
   name: string;
   role: Role;
+  /**
+   * Tenant milik user (multi-tenant, fase 1). Opsional hanya supaya token
+   * lama yang masih tersimpan di cookie tidak langsung invalid — token tanpa
+   * claim ini dianggap belum terikat workspace.
+   */
+  workspaceId?: string;
 };
 
 /**
@@ -27,6 +33,10 @@ export async function verifySessionToken(token: string): Promise<SessionUser | n
       email: String(payload.email ?? ''),
       name: String(payload.name ?? ''),
       role: payload.role === 'demo' ? 'demo' : 'owner',
+      workspaceId:
+        typeof payload.workspaceId === 'string' && payload.workspaceId
+          ? payload.workspaceId
+          : undefined,
     };
   } catch {
     return null;

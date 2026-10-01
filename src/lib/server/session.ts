@@ -19,7 +19,13 @@ function secretKey() {
 }
 
 export async function createSessionToken(user: SessionUser) {
-  return new SignJWT({ email: user.email, name: user.name, role: user.role })
+  return new SignJWT({
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    // Claim tenant: dipakai fase 3 untuk scoping semua query per workspace.
+    ...(user.workspaceId ? { workspaceId: user.workspaceId } : {}),
+  })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(user.id)
     .setIssuedAt()
@@ -36,6 +42,10 @@ export async function verifySessionToken(token: string): Promise<SessionUser | n
       email: String(payload.email ?? ''),
       name: String(payload.name ?? ''),
       role: payload.role === 'demo' ? 'demo' : 'owner',
+      workspaceId:
+        typeof payload.workspaceId === 'string' && payload.workspaceId
+          ? payload.workspaceId
+          : undefined,
     };
   } catch {
     return null;

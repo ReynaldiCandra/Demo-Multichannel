@@ -352,9 +352,27 @@ export type CrmProduct = typeof crmProductsTable.$inferSelect;
 export type CrmLead = typeof crmLeadsTable.$inferSelect;
 
 /**
+ * Tenant SaaS: satu workspace = satu pelanggan dengan datanya sendiri.
+ * Semua tabel data bisnis punya (atau menurun ke) workspace_id — lihat
+ * roadmap-multi-tenant.md. `plan`/`status`/`trial_ends_at` adalah hook untuk
+ * billing (fase 5).
+ */
+export const workspacesTable = pgTable('workspaces', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  plan: text('plan').notNull().default('free'),
+  status: text('status').notNull().default('active'),
+  trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
  * Akun login. `role` menentukan hak akses:
  *  - owner : akses penuh
  *  - demo  : hanya baca, semua aksi tulis ditolak di server
+ * `workspaceId` menentukan tenant data mana yang boleh diakses (multi-tenant,
+ * fase 1: hanya ada di sesi — scoping query menyusul di fase 3).
  */
 export const usersTable = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -362,6 +380,7 @@ export const usersTable = pgTable('users', {
   passwordHash: text('password_hash').notNull(),
   name: text('name').notNull(),
   role: text('role').notNull().default('owner'),
+  workspaceId: uuid('workspace_id').references(() => workspacesTable.id),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -380,4 +399,5 @@ export const modulesTable = pgTable('modules', {
 });
 
 export type User = typeof usersTable.$inferSelect;
+export type Workspace = typeof workspacesTable.$inferSelect;
 export type AppModule = typeof modulesTable.$inferSelect;
