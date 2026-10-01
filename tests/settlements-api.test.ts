@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import * as schema from '@/lib/db/schema';
@@ -30,15 +30,8 @@ describe('API settlement: status pencairan per toko per bulan', () => {
       .split('--> statement-breakpoint').join('')
       .split(';').map((x) => x.trim()).filter((x) => x && !/ROW LEVEL SECURITY/.test(x));
     for (const stmt of ddl) await pg.exec(stmt);
-    for (const file of [
-      '0002_sales_status_order_fee.sql',
-      '0003_suppliers.sql',
-      '0004_safe_reporting_indexes_and_suppliers.sql',
-      '0005_product_supplier_image.sql',
-      '0006_supplier_sale_image.sql',
-      '0007_settlements.sql',
-      '0012_live_and_store_media.sql',
-    ]) {
+    // Sisa migrasi berurutan (0001 dst.) — 0000 sudah lewat DDL terpisah di atas.
+    for (const file of readdirSync('supabase/migrations').filter((name) => name.endsWith('.sql') && name !== '0000_init.sql').sort()) {
       await pg.exec(readFileSync(`supabase/migrations/${file}`, 'utf8'));
     }
 

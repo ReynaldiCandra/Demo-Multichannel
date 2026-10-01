@@ -20,6 +20,7 @@ import {
   salesTable,
   storesTable,
   usersTable,
+  workspacesTable,
 } from '../src/lib/db/schema';
 
 config({ path: '.env.local' });
@@ -57,6 +58,19 @@ const MODULES = [
 ];
 
 async function seedUsers() {
+  // Workspace default untuk seluruh data seed (multi-tenant fase 1-2).
+  const [workspace] = await db
+    .insert(workspacesTable)
+    .values({ name: 'Websensial Demo', slug: 'websensial-demo' })
+    .onConflictDoNothing()
+    .returning();
+  const workspaceId =
+    workspace?.id ??
+    (await db.select({ id: workspacesTable.id }).from(workspacesTable).where(
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      (await import('drizzle-orm')).eq(workspacesTable.slug, 'websensial-demo'),
+    ))[0]?.id;
+
   const existing = await db.select({ id: usersTable.id }).from(usersTable).limit(1);
   if (existing.length) {
     console.log('• Akun sudah ada, dilewati.');
@@ -69,8 +83,8 @@ async function seedUsers() {
   const demoPassword = process.env.SEED_DEMO_PASSWORD ?? 'demo1234';
 
   await db.insert(usersTable).values([
-    { email: ownerEmail, passwordHash: await bcrypt.hash(ownerPassword, 10), name: ownerName, role: 'owner' },
-    { email: 'demo@websensial.com', passwordHash: await bcrypt.hash(demoPassword, 10), name: 'Akun Demo', role: 'demo' },
+    { email: ownerEmail, passwordHash: await bcrypt.hash(ownerPassword, 10), name: ownerName, role: 'owner', workspaceId },
+    { email: 'demo@websensial.com', passwordHash: await bcrypt.hash(demoPassword, 10), name: 'Akun Demo', role: 'demo', workspaceId },
   ]);
 
   console.log('• Akun dibuat:');

@@ -136,8 +136,10 @@ pesan halus ("Masa trial berakhir — silakan berlangganan")
 - [x] **Fase 1 — Fondasi** (migrasi 0014): tabel `workspaces`, `users.workspace_id`
       + backfill default, `workspaceId` di sesi JWT & login. Tidak mengubah
       perilaku aplikasi.
-- [ ] **Fase 2 — Skema data**: kolom `workspace_id` di 7 tabel root + unique/index
-      baru + backfill + trigger/check nil tidak perlu (app-level).
+- [x] **Fase 2 — Skema data** (migrasi 0015): kolom `workspace_id` di 8 tabel root
+      (stores, suppliers, hosts, jobs, invoices, tasks, meta_ad_tests, crm_clients)
+      + index + unique per-tenant untuk `stores` dan `invoices` + backfill. Aplikasi
+      belum memfilter apa pun (scoping = fase 3).
 - [ ] **Fase 3 — Scoping aplikasi**: `requireWorkspace()` + refactor semua query
       (dashboard, reports, POS, master, live, jobs, invoice, kanban, CRM, modules
       → `workspace_modules`). Suite test PGlite ditambah test lintas-tenant

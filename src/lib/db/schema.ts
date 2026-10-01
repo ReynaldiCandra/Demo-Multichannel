@@ -21,6 +21,8 @@ export const storesTable = pgTable(
   'stores',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    /** Tenant pemilik baris (multi-tenant — lihat roadmap-multi-tenant.md). */
+    workspaceId: uuid('workspace_id').references(() => workspacesTable.id),
     name: text('name').notNull(),
     channel: text('channel').notNull(),
     isActive: boolean('is_active').notNull().default(true),
@@ -31,8 +33,10 @@ export const storesTable = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    unique('stores_name_channel_unique').on(table.name, table.channel),
+    // Per-tenant: dua workspace boleh punya brand + kanal yang sama.
+    unique('stores_workspace_name_channel_unique').on(table.workspaceId, table.name, table.channel),
     index('stores_channel_active_idx').on(table.channel, table.isActive),
+    index('stores_workspace_id_idx').on(table.workspaceId),
   ],
 );
 
@@ -43,6 +47,7 @@ export const storesTable = pgTable(
  */
 export const suppliersTable = pgTable('suppliers', {
   id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').references(() => workspacesTable.id),
   name: text('name').notNull(),
   whatsapp: text('whatsapp'),
   category: text('category'),
@@ -50,7 +55,7 @@ export const suppliersTable = pgTable('suppliers', {
   imageUrl: text('image_url'),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [index('suppliers_workspace_id_idx').on(table.workspaceId)]);
 
 export const productsTable = pgTable('products', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -102,6 +107,7 @@ export const salesTable = pgTable('sales', {
 
 export const metaAdTestsTable = pgTable('meta_ad_tests', {
   id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').references(() => workspacesTable.id),
   productName: text('product_name').notNull(),
   startDate: date('start_date', { mode: 'string' }).notNull(),
   endDate: date('end_date', { mode: 'string' }),
@@ -112,10 +118,11 @@ export const metaAdTestsTable = pgTable('meta_ad_tests', {
   totalRevenue: integer('total_revenue').notNull().default(0),
   notes: text('notes'),
   lastUpdated: date('last_updated', { mode: 'string' }).notNull(),
-});
+}, (table) => [index('meta_ad_tests_workspace_id_idx').on(table.workspaceId)]);
 
 export const jobsTable = pgTable('jobs', {
   id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').references(() => workspacesTable.id),
   clientName: text('client_name').notNull(),
   jobType: text('job_type').notNull(),
   startDate: date('start_date', { mode: 'string' }).notNull(),
@@ -124,7 +131,7 @@ export const jobsTable = pgTable('jobs', {
   contractValue: integer('contract_value').notNull().default(0),
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [index('jobs_workspace_id_idx').on(table.workspaceId)]);
 
 export const jobCostsTable = pgTable('job_costs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -179,6 +186,7 @@ export const settlementsTable = pgTable(
  */
 export const invoicesTable = pgTable('invoices', {
   id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').references(() => workspacesTable.id),
   invoiceNumber: text('invoice_number').notNull(),
   title: text('title').notNull().default('Invoice'),
   clientName: text('client_name').notNull(),
@@ -193,7 +201,11 @@ export const invoicesTable = pgTable('invoices', {
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [unique('invoices_invoice_number_unique').on(table.invoiceNumber)]);
+}, (table) => [
+  // Nomor invoice unik per tenant, bukan global.
+  unique('invoices_workspace_invoice_number_unique').on(table.workspaceId, table.invoiceNumber),
+  index('invoices_workspace_id_idx').on(table.workspaceId),
+]);
 
 export const invoiceItemsTable = pgTable(
   'invoice_items',
@@ -236,6 +248,7 @@ export const tasksTable = pgTable(
   'tasks',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id').references(() => workspacesTable.id),
     title: text('title').notNull(),
     notes: text('notes'),
     status: text('status').notNull().default('todo'),
@@ -248,11 +261,15 @@ export const tasksTable = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index('tasks_status_position_idx').on(table.status, table.position)],
+  (table) => [
+    index('tasks_status_position_idx').on(table.status, table.position),
+    index('tasks_workspace_id_idx').on(table.workspaceId),
+  ],
 );
 
 export const hostsTable = pgTable('hosts', {
   id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').references(() => workspacesTable.id),
   name: text('name').notNull(),
   phone: text('phone'),
   commissionType: text('commission_type').notNull().default('per_hour'),
@@ -260,7 +277,7 @@ export const hostsTable = pgTable('hosts', {
   /** Foto host — tampil di daftar host & kartu sesi live. */
   imageUrl: text('image_url'),
   isActive: boolean('is_active').notNull().default(true),
-});
+}, (table) => [index('hosts_workspace_id_idx').on(table.workspaceId)]);
 
 export const liveSessionsTable = pgTable('live_sessions', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -304,6 +321,7 @@ export type LiveSession = typeof liveSessionsTable.$inferSelect;
  */
 export const crmClientsTable = pgTable('crm_clients', {
   id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').references(() => workspacesTable.id),
   name: text('name').notNull(),
   category: text('category'),
   contactName: text('contact_name'),
@@ -311,7 +329,10 @@ export const crmClientsTable = pgTable('crm_clients', {
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [index('crm_clients_name_idx').on(table.name)]);
+}, (table) => [
+  index('crm_clients_name_idx').on(table.name),
+  index('crm_clients_workspace_id_idx').on(table.workspaceId),
+]);
 
 export const crmProductsTable = pgTable('crm_products', {
   id: uuid('id').primaryKey().defaultRandom(),

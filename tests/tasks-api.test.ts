@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import * as schema from '@/lib/db/schema';
@@ -30,8 +30,10 @@ describe('API kanban tugas: buat, pindah kolom, urutan, validasi, hapus', () => 
       .split('--> statement-breakpoint').join('')
       .split(';').map((x) => x.trim()).filter((x) => x && !/ROW LEVEL SECURITY/.test(x));
     for (const stmt of ddl) await pg.exec(stmt);
-    // Migration modul + tasks: 0009 berisi tabel tasks dan seed modul kanban.
-    await pg.exec(readFileSync('supabase/migrations/0009_tasks.sql', 'utf8'));
+    // Sisa migrasi berurutan (0001 dst.) — 0000 sudah lewat DDL terpisah di atas.
+    for (const file of readdirSync('supabase/migrations').filter((name) => name.endsWith('.sql') && name !== '0000_init.sql').sort()) {
+      await pg.exec(readFileSync(`supabase/migrations/${file}`, 'utf8'));
+    }
 
     const { GET, POST } = await import('@/app/api/tasks/route');
     const { PATCH, DELETE } = await import('@/app/api/tasks/[taskId]/route');
