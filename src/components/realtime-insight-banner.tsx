@@ -4,10 +4,11 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ArrowDownRight, ArrowUpRight, ChevronRight, Clock, Minus, RefreshCw, TrendingUp } from 'lucide-react';
 import { useStorePerformance } from '@/lib/api/hooks';
-import { cn, monthLabel, monthNow } from '@/lib/format';
+import { cn, monthLabel, monthNow, today } from '@/lib/format';
 import {
   buildChannelInsight,
   formatGrowth,
+  monthToDateUntil,
   previousMonth,
   relativeTimeLabel,
   type ChannelGrowth,
@@ -36,14 +37,23 @@ function useNow(intervalMs = 30_000) {
  * Periode terpilih memakai query yang SAMA (key yang sama) dengan KPI cards,
  * jadi angkanya tidak mungkin berbeda dari KPI. Tidak ada angka atau
  * timestamp bawaan — semuanya dari respons server.
+ *
+ * Pembanding bulan lalu memakai rentang MTD (month-to-date) saat melihat
+ * bulan BERJALAN: 2 Okt dibanding 1–2 Sep, bukan seluruh September — kalau
+ * tidak, growth di paruh pertama setiap bulan selalu terlihat tajam turun
+ * padahal bisnis sehat. Untuk bulan lampau, pembanding tetap bulan penuh.
  */
 export function RealtimeInsightBanner({ month }: { month: string }) {
   const prevMonth = previousMonth(month);
+  const runningMonth = month === monthNow;
+  // MTD: pembanding bulan lalu dibatasi sampai tanggal yang sama (eksklusif).
+  const compareUntil = runningMonth ? monthToDateUntil(today()) : undefined;
   const current = useStorePerformance({ month }, { refetchInterval: REFRESH_MS });
-  const previous = useStorePerformance({ month: prevMonth });
+  const previous = useStorePerformance({ month: prevMonth, until: compareUntil });
   const now = useNow();
 
   const prevLabel = monthLabel(prevMonth);
+  const compareLabel = runningMonth ? `periode yang sama di ${prevLabel}` : prevLabel;
   const pending =
     current.isLoading ||
     previous.isLoading ||
@@ -95,7 +105,6 @@ export function RealtimeInsightBanner({ month }: { month: string }) {
 
   const insight = buildChannelInsight(current.data, previous.data);
   const updatedAt = current.dataUpdatedAt;
-  const runningMonth = month === monthNow;
 
   let headline: string;
   let body: string;
@@ -104,17 +113,17 @@ export function RealtimeInsightBanner({ month }: { month: string }) {
     body =
       insight.reason === 'no-current'
         ? `Belum ada penjualan selesai pada ${monthLabel(month)}. Insight muncul setelah ada transaksi.`
-        : `Belum ada penjualan selesai pada ${prevLabel} sebagai pembanding, jadi pertumbuhan belum bisa dihitung.`;
+        : `Belum ada penjualan selesai pada ${compareLabel} sebagai pembanding, jadi pertumbuhan belum bisa dihitung.`;
   } else if (insight.leader) {
     headline = `Penjualan ${insight.leader.channel} tumbuh paling cepat.`;
-    body = `Naik ${formatGrowth(insight.leader.growth ?? 0).replace('+', '')} dibanding ${prevLabel}.`;
+    body = `Naik ${formatGrowth(insight.leader.growth ?? 0).replace('+', '')} dibanding ${compareLabel}.`;
     if (insight.leader.profit > 0) body += ' Pertimbangkan menambah budget iklan untuk produk terlaris.';
   } else if (insight.weakest && (insight.weakest.growth ?? 0) < 0) {
     headline = 'Belum ada kanal yang tumbuh.';
-    body = `Omzet ${insight.weakest.channel} turun ${formatGrowth(insight.weakest.growth ?? 0).replace('−', '')} dibanding ${prevLabel}.`;
+    body = `Omzet ${insight.weakest.channel} turun ${formatGrowth(insight.weakest.growth ?? 0).replace('−', '')} dibanding ${compareLabel}.`;
   } else {
     headline = 'Omzet stabil dibanding periode sebelumnya.';
-    body = `Omzet semua kanal sama dengan ${prevLabel}.`;
+    body = `Omzet semua kanal sama dengan ${compareLabel}.`;
   }
 
   const leader = insight.status === 'ok' ? insight.leader : null;
@@ -181,8 +190,8 @@ export function RealtimeInsightBanner({ month }: { month: string }) {
               ))}
             </div>
             <div className="rt-foot">
-              <Clock size={10} /> Pertumbuhan omzet vs {prevLabel}
-              {runningMonth ? ' · bulan ini belum penuh' : ''}
+              <Clock size={10} /> Pertumbuhan omzet vs {compareLabel}
+              {runningMonth ? ' · data s/d hari ini' : ''}
             </div>
           </>
         ) : (

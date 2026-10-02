@@ -156,7 +156,7 @@ export const getListLedgerQueryKey = () => ['ledger'] as const;
 export const getListModulesQueryKey = () => ['modules'] as const;
 export const getSalesReportQueryKey = (params?: SalesReportParams) =>
   ['sales-report', params ?? {}] as const;
-export const getStorePerformanceQueryKey = (params?: { month?: string }) =>
+export const getStorePerformanceQueryKey = (params?: { month?: string; until?: string }) =>
   ['store-performance', params ?? {}] as const;
 
 /* ------------------------------------------------------------------ */
@@ -384,7 +384,7 @@ export function useSalesReport(params: SalesReportParams = {}) {
 }
 
 export function useStorePerformance(
-  params: { month?: string } = {},
+  params: { month?: string; until?: string } = {},
   options: { refetchInterval?: number } = {},
 ) {
   return useQuery({

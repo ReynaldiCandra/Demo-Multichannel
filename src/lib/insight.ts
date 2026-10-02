@@ -38,6 +38,22 @@ export function previousMonth(month: string): string {
   return `${date.getUTCFullYear().toString().padStart(4, '0')}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
+/**
+ * Batas pembanding MTD (month-to-date) — eksklusif, YYYY-MM-DD.
+ * Setara "tanggal hari ini + 1" di bulan SEBELUM `todayIso`, jadi rentang
+ * pembandingnya 1 s/d tanggal yang sama bulan lalu.
+ *
+ * Contoh: hari ini 2026-10-02 → '2026-09-03' (omzet 1–2 Sep).
+ * Tanggal yang tak ada di bulan lalu (mis. 31 Okt, September hanya 30 hari)
+ * diklem ke awal bulan berjalan → omzet bulan lalu penuh.
+ */
+export function monthToDateUntil(todayIso: string): string {
+  const [year, month, day] = todayIso.split('-').map(Number);
+  const candidate = Date.UTC(year, month - 2, day + 1);
+  const thisMonthFirst = Date.UTC(year, month - 1, 1);
+  return new Date(Math.min(candidate, thisMonthFirst)).toISOString().slice(0, 10);
+}
+
 const growthOf = (revenue: number, previousRevenue: number): number | null =>
   previousRevenue > 0 ? ((revenue - previousRevenue) / previousRevenue) * 100 : null;
 

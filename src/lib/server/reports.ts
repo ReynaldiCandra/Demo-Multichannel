@@ -65,8 +65,21 @@ export type StorePerformanceReport = {
 export async function getStorePerformance(
   month?: string,
   workspaceId?: string,
+  /**
+   * Batas akhir opsional (eksklusif, YYYY-MM-DD) — dipakai pembanding MTD di
+   * banner insight: bulan berjalan dibanding periode SAMA bulan sebelumnya.
+   * Diklem ke dalam batas bulan supaya param janggal (format salah, di luar
+   * bulan) tidak pernah melebarkan rentang — tanpa `until`, perilaku lama
+   * (bulan penuh) 100% tetap.
+   */
+  until?: string,
 ): Promise<StorePerformanceReport> {
   const bounds = month ? monthBounds(month) : null;
+  /** Override batas akhir MTD — null = pakai batas bulan penuh (perilaku lama). */
+  const clampedUntil =
+    bounds && until && /^\d{4}-\d{2}-\d{2}$/.test(until) && until > bounds.start && until < bounds.end
+      ? until
+      : null;
 
   const revenueExpr = sql<number>`coalesce(sum(${salesTable.qty} * ${salesTable.actualPrice} - ${salesTable.discount}), 0)`;
   const costExpr = sql<number>`coalesce(sum(${salesTable.qty} * ${salesTable.modalSnapshot} + ${salesTable.platformFee}), 0)`;
@@ -93,7 +106,7 @@ export async function getStorePerformance(
             eq(salesTable.productId, productsTable.id),
             eq(salesTable.status, 'selesai'),
             gte(salesTable.saleDate, bounds.start),
-            lt(salesTable.saleDate, bounds.end),
+            lt(salesTable.saleDate, clampedUntil ?? bounds.end),
           )
         : and(eq(salesTable.productId, productsTable.id), eq(salesTable.status, 'selesai')),
     )
@@ -119,7 +132,7 @@ export async function getStorePerformance(
       and(
         eq(salesTable.status, 'selesai'),
         bounds ? gte(salesTable.saleDate, bounds.start) : undefined,
-        bounds ? lt(salesTable.saleDate, bounds.end) : undefined,
+        bounds ? lt(salesTable.saleDate, clampedUntil ?? bounds.end) : undefined,
         // Tenant: penjualan menurun ke products → stores.
         workspaceId ? eq(storesTable.workspaceId, workspaceId) : undefined,
       ),

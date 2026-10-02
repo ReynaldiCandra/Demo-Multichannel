@@ -3,6 +3,7 @@ import type { StorePerformanceReport, StorePerformanceRow } from '@/lib/api/type
 import {
   buildChannelInsight,
   formatGrowth,
+  monthToDateUntil,
   previousMonth,
   relativeTimeLabel,
 } from '@/lib/insight';
@@ -41,6 +42,24 @@ describe('previousMonth', () => {
   it('mundur satu bulan, termasuk lintas tahun', () => {
     expect(previousMonth('2026-09')).toBe('2026-08');
     expect(previousMonth('2026-01')).toBe('2025-12');
+  });
+});
+
+describe('monthToDateUntil (batas pembanding MTD)', () => {
+  it('setara tanggal hari ini + 1 di bulan sebelumnya (eksklusif)', () => {
+    // Hari ini 2 Okt → omzet pembanding 1–2 Sep.
+    expect(monthToDateUntil('2026-10-02')).toBe('2026-09-03');
+    // Awal bulan: pembanding cuma 1 hari.
+    expect(monthToDateUntil('2026-10-01')).toBe('2026-09-02');
+    // Lintas tahun: 5 Jan 2027 → 1–5 Des 2026.
+    expect(monthToDateUntil('2027-01-05')).toBe('2026-12-06');
+  });
+
+  it('tanggal yang tak ada di bulan lalu diklem ke bulan lalu penuh', () => {
+    // 31 Okt vs September (30 hari) → pembanding = seluruh September.
+    expect(monthToDateUntil('2026-10-31')).toBe('2026-10-01');
+    // 31 Mar vs Februari (28 hari) → pembanding = seluruh Februari.
+    expect(monthToDateUntil('2026-03-31')).toBe('2026-03-01');
   });
 });
 

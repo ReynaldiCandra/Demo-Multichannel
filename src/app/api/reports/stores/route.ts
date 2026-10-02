@@ -9,6 +9,9 @@ export const GET = handler(async (request: Request) => {
   const ctx = await requireWorkspace();
   if (isResponse(ctx)) return ctx;
 
-  const month = new URL(request.url).searchParams.get('month') ?? undefined;
-  return NextResponse.json(await getStorePerformance(month, ctx.workspaceId));
+  const url = new URL(request.url);
+  const month = url.searchParams.get('month') ?? undefined;
+  // Batas MTD opsional (banner insight) — divalidasi/diklem di server.
+  const until = url.searchParams.get('until') ?? undefined;
+  return NextResponse.json(await getStorePerformance(month, ctx.workspaceId, until));
 });
