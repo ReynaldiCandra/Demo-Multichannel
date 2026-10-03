@@ -5,11 +5,13 @@
  * halaman punya satu tugas (pola yang sama dengan Settlement vs Invoice).
  */
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import {
+  useBulkDeleteCrmClients,
+  useBulkDeleteCrmProducts,
   useCreateCrmClient,
   useCreateCrmProduct,
   useDeleteCrmClient,
@@ -18,6 +20,7 @@ import {
   useListCrmProducts,
 } from '@/lib/api/hooks';
 import { Button, ConfirmDialog, PageTitle, Panel, State, type ConfirmRequest } from '@/components/ui';
+import { BulkBar, BulkCheckbox, useBulkSelection } from '@/components/bulk-selection';
 import { cn, money } from '@/lib/format';
 import { ClientFormModal, CRM_SUB_PAGES, ProductFormModal } from '../_shared';
 
@@ -34,6 +37,43 @@ export default function CrmClientsPage() {
   const deleteClient = useDeleteCrmClient();
   const createProduct = useCreateCrmProduct();
   const deleteProduct = useDeleteCrmProduct();
+  const bulkDeleteClients = useBulkDeleteCrmClients();
+  const bulkDeleteProducts = useBulkDeleteCrmProducts();
+
+  // Seleksi terpisah untuk tabel klien dan tabel produk (dua panel berdampingan).
+  const clientBulk = useBulkSelection();
+  const clientRows = useMemo(() => clients.data ?? [], [clients.data]);
+  const clientIds = useMemo(() => clientRows.map((row) => row.id), [clientRows]);
+  useEffect(() => {
+    clientBulk.prune(clientIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientIds]);
+  const selectedClientIds = useMemo(() => [...clientBulk.selected], [clientBulk.selected]);
+
+  const productBulk = useBulkSelection();
+  const productRows = useMemo(() => products.data ?? [], [products.data]);
+  const productIds = useMemo(() => productRows.map((row) => row.id), [productRows]);
+  useEffect(() => {
+    productBulk.prune(productIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productIds]);
+  const selectedProductIds = useMemo(() => [...productBulk.selected], [productBulk.selected]);
+
+  const bulkDeleteClientsSelected = () =>
+    setConfirming({
+      message: `Hapus ${selectedClientIds.length} klien terpilih beserta semua leads & produknya? Tindakan ini tidak bisa dibatalkan.`,
+      onConfirm: () => {
+        bulkDeleteClients.mutate({ ids: selectedClientIds }, { onSuccess: () => clientBulk.clear() });
+      },
+    });
+
+  const bulkDeleteProductsSelected = () =>
+    setConfirming({
+      message: `Hapus ${selectedProductIds.length} produk iklan terpilih?`,
+      onConfirm: () => {
+        bulkDeleteProducts.mutate({ ids: selectedProductIds }, { onSuccess: () => productBulk.clear() });
+      },
+    });
 
   return (
     <>
@@ -73,13 +113,20 @@ export default function CrmClientsPage() {
           </div>
           {clients.isLoading ? (
             <State type="loading" />
-          ) : !(clients.data ?? []).length ? (
+          ) : !clientRows.length ? (
             <State type="empty" />
           ) : (
             <div className="table-scroll">
               <table>
                 <thead>
                   <tr>
+                    <th className="bulk-col">
+                      <BulkCheckbox
+                        checked={clientBulk.allSelected(clientIds)}
+                        onChange={() => clientBulk.toggleAll(clientIds)}
+                        label="Pilih semua klien"
+                      />
+                    </th>
                     <th>Klien</th>
                     <th>Bidang</th>
                     <th>Kontak</th>
@@ -89,8 +136,19 @@ export default function CrmClientsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(clients.data ?? []).map((client) => (
-                    <tr key={client.id} data-testid={`row-crm-client-${client.id}`}>
+                  {clientRows.map((client) => (
+                    <tr
+                      key={client.id}
+                      className={clientBulk.isSelected(client.id) ? 'bulk-row-selected' : undefined}
+                      data-testid={`row-crm-client-${client.id}`}
+                    >
+                      <td className="bulk-col">
+                        <BulkCheckbox
+                          checked={clientBulk.isSelected(client.id)}
+                          onChange={() => clientBulk.toggle(client.id)}
+                          label={`Pilih klien ${client.name}`}
+                        />
+                      </td>
                       <td>
                         <strong>{client.name}</strong>
                         {client.notes && <small className="table-sub">{client.notes}</small>}
@@ -133,13 +191,20 @@ export default function CrmClientsPage() {
           </div>
           {products.isLoading ? (
             <State type="loading" />
-          ) : !(products.data ?? []).length ? (
+          ) : !productRows.length ? (
             <State type="empty" />
           ) : (
             <div className="table-scroll">
               <table>
                 <thead>
                   <tr>
+                    <th className="bulk-col">
+                      <BulkCheckbox
+                        checked={productBulk.allSelected(productIds)}
+                        onChange={() => productBulk.toggleAll(productIds)}
+                        label="Pilih semua produk"
+                      />
+                    </th>
                     <th>Produk</th>
                     <th>Klien</th>
                     <th className="right">Harga referensi</th>
@@ -148,8 +213,19 @@ export default function CrmClientsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(products.data ?? []).map((product) => (
-                    <tr key={product.id} data-testid={`row-crm-product-${product.id}`}>
+                  {productRows.map((product) => (
+                    <tr
+                      key={product.id}
+                      className={productBulk.isSelected(product.id) ? 'bulk-row-selected' : undefined}
+                      data-testid={`row-crm-product-${product.id}`}
+                    >
+                      <td className="bulk-col">
+                        <BulkCheckbox
+                          checked={productBulk.isSelected(product.id)}
+                          onChange={() => productBulk.toggle(product.id)}
+                          label={`Pilih produk ${product.name}`}
+                        />
+                      </td>
                       <td>
                         <strong>{product.name}</strong>
                       </td>
@@ -214,6 +290,21 @@ export default function CrmClientsPage() {
           }}
         />
       )}
+
+      <BulkBar
+        count={clientBulk.count}
+        label="klien"
+        onClear={() => clientBulk.clear()}
+        onDelete={bulkDeleteClientsSelected}
+      />
+
+      <BulkBar
+        count={productBulk.count}
+        label="produk iklan"
+        onClear={() => productBulk.clear()}
+        onDelete={bulkDeleteProductsSelected}
+        deleteLabel="Hapus produk terpilih"
+      />
     </>
   );
 }

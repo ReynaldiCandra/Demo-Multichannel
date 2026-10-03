@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { and, asc, count, eq } from 'drizzle-orm';
+import { and, asc, count, eq, inArray } from 'drizzle-orm';
 import { db, crmClientsTable, crmLeadsTable, crmProductsTable } from '@/lib/db';
 import { badRequest, handler, parseBody } from '@/lib/server/http';
 import { isResponse, requireWorkspace, requireWorkspaceWrite } from '@/lib/server/workspace';
-import { CrmClientInput } from '@/lib/server/validation';
+import { BulkIdsInput, CrmClientInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,4 +59,28 @@ export const POST = handler(async (request: Request) => {
     .values({ ...parsed.data, workspaceId: ctx.workspaceId })
     .returning();
   return NextResponse.json(client, { status: 201 });
+});
+
+/**
+ * DELETE /api/crm/clients — hapus massal klien milik workspace.
+ * Produk & leads ikut terhapus lewat ON DELETE CASCADE.
+ */
+export const DELETE = handler(async (request: Request) => {
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
+
+  const parsed = await parseBody(request, BulkIdsInput);
+  if (!parsed.success) return badRequest(parsed.error);
+
+  const deleted = await db
+    .delete(crmClientsTable)
+    .where(
+      and(
+        inArray(crmClientsTable.id, parsed.data.ids),
+        eq(crmClientsTable.workspaceId, ctx.workspaceId),
+      ),
+    )
+    .returning({ id: crmClientsTable.id });
+
+  return NextResponse.json({ ok: true, deleted: deleted.map((row) => row.id) });
 });

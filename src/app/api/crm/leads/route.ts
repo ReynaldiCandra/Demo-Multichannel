@@ -3,7 +3,7 @@ import { and, desc, eq, inArray, lte, or, sql, isNull } from 'drizzle-orm';
 import { db, crmClientsTable, crmLeadsTable, crmProductsTable } from '@/lib/db';
 import { badRequest, handler, parseBody } from '@/lib/server/http';
 import { isResponse, requireWorkspace, requireWorkspaceWrite } from '@/lib/server/workspace';
-import { CRM_LEAD_CATEGORIES, CrmLeadCreateInput } from '@/lib/server/validation';
+import { BulkCategoryInput, BulkIdsInput, CRM_LEAD_CATEGORIES, CrmLeadCreateInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -180,28 +180,31 @@ export const POST = handler(async (request: Request) => {
   return NextResponse.json(lead, { status: 201 });
 });
 
-/** DELETE /api/crm/leads?ids=a,b,c — hapus massal (hanya lead milik workspace). */
+/**
+ * DELETE /api/crm/leads — hapus massal lead milik workspace.
+ * Body: { ids: [...] } (BulkIdsInput), senada dengan endpoint bulk lain.
+ */
 export const DELETE = handler(async (request: Request) => {
   const ctx = await requireWorkspaceWrite();
   if (isResponse(ctx)) return ctx;
 
-  const ids = new URL(request.url).searchParams.get('ids')?.split(',').filter(Boolean) ?? [];
-  if (!ids.length) {
-    return NextResponse.json({ error: 'Tidak ada lead yang dipilih.' }, { status: 400 });
-  }
-  if (ids.some((id) => !/^[0-9a-f-]{36}$/i.test(id))) {
-    return NextResponse.json({ error: 'ID tidak valid.' }, { status: 400 });
-  }
+  const parsed = await parseBody(request, BulkIdsInput);
+  if (!parsed.success) return badRequest(parsed.error);
 
   // Saring dulu: hanya lead yang kliennya milik workspace ini yang boleh terhapus.
   const owned = await db
     .select({ id: crmLeadsTable.id })
     .from(crmLeadsTable)
     .innerJoin(crmClientsTable, eq(crmLeadsTable.clientId, crmClientsTable.id))
-    .where(and(inArray(crmLeadsTable.id, ids), eq(crmClientsTable.workspaceId, ctx.workspaceId)));
+    .where(
+      and(
+        inArray(crmLeadsTable.id, parsed.data.ids),
+        eq(crmClientsTable.workspaceId, ctx.workspaceId),
+      ),
+    );
 
   if (!owned.length) {
-    return NextResponse.json({ ok: true, deleted: 0 });
+    return NextResponse.json({ ok: true, deleted: [] });
   }
 
   const deleted = await db
@@ -209,5 +212,47 @@ export const DELETE = handler(async (request: Request) => {
     .where(inArray(crmLeadsTable.id, owned.map((row) => row.id)))
     .returning({ id: crmLeadsTable.id });
 
-  return NextResponse.json({ ok: true, deleted: deleted.length });
+  return NextResponse.json({ ok: true, deleted: deleted.map((row) => row.id) });
+});
+
+/**
+ * PATCH /api/crm/leads — pindah kategori massal (pipeline hot/warm/closing/follow_up).
+ * Body: BulkCategoryInput. closed_at ikut diatur sama seperti PATCH satuan.
+ */
+export const PATCH = handler(async (request: Request) => {
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
+
+  const parsed = await parseBody(request, BulkCategoryInput);
+  if (!parsed.success) return badRequest(parsed.error);
+  const { ids, category } = parsed.data;
+
+  // Saring ke workspace ini dulu, baru update — ID tenant lain diabaikan diam-diam.
+  const owned = await db
+    .select({ id: crmLeadsTable.id, category: crmLeadsTable.category, closedAt: crmLeadsTable.closedAt })
+    .from(crmLeadsTable)
+    .innerJoin(crmClientsTable, eq(crmLeadsTable.clientId, crmClientsTable.id))
+    .where(and(inArray(crmLeadsTable.id, ids), eq(crmClientsTable.workspaceId, ctx.workspaceId)));
+
+  if (!owned.length) {
+    return NextResponse.json({ ok: true, updated: [] });
+  }
+
+  const now = new Date();
+  const updated = [] as Array<{ id: string }>;
+  for (const row of owned) {
+    const wasClosing = row.category === 'closing';
+    const [lead] = await db
+      .update(crmLeadsTable)
+      .set({
+        category,
+        closedAt: category === 'closing' ? (wasClosing ? row.closedAt : now) : null,
+        updatedAt: now,
+      })
+      .where(eq(crmLeadsTable.id, row.id))
+      .returning({ id: crmLeadsTable.id });
+    if (lead) updated.push(lead);
+  }
+
+  return NextResponse.json({ ok: true, updated: updated.map((row) => row.id) });
 });

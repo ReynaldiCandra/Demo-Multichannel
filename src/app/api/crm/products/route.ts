@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { db, crmClientsTable, crmProductsTable } from '@/lib/db';
 import { badRequest, handler, parseBody } from '@/lib/server/http';
 import { isResponse, requireWorkspace, requireWorkspaceWrite } from '@/lib/server/workspace';
-import { CrmProductInput } from '@/lib/server/validation';
+import { BulkIdsInput, CrmProductInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,4 +68,38 @@ export const POST = handler(async (request: Request) => {
     })
     .returning();
   return NextResponse.json(product, { status: 201 });
+});
+
+/**
+ * DELETE /api/crm/products — hapus massal produk iklan milik workspace.
+ * Leads yang merujuk produk ini tetap aman (product_id jadi NULL).
+ */
+export const DELETE = handler(async (request: Request) => {
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
+
+  const parsed = await parseBody(request, BulkIdsInput);
+  if (!parsed.success) return badRequest(parsed.error);
+
+  // Saring ke workspace ini lewat klien pemiliknya.
+  const owned = await db
+    .select({ id: crmProductsTable.id })
+    .from(crmProductsTable)
+    .innerJoin(crmClientsTable, eq(crmProductsTable.clientId, crmClientsTable.id))
+    .where(
+      and(
+        inArray(crmProductsTable.id, parsed.data.ids),
+        eq(crmClientsTable.workspaceId, ctx.workspaceId),
+      ),
+    );
+  if (!owned.length) {
+    return NextResponse.json({ ok: true, deleted: [] });
+  }
+
+  const deleted = await db
+    .delete(crmProductsTable)
+    .where(inArray(crmProductsTable.id, owned.map((row) => row.id)))
+    .returning({ id: crmProductsTable.id });
+
+  return NextResponse.json({ ok: true, deleted: deleted.map((row) => row.id) });
 });

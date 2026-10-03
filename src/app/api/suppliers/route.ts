@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { db, productsTable, salesTable, storesTable, suppliersTable } from '@/lib/db';
 import { badRequest, handler, parseBody } from '@/lib/server/http';
 import { requireWorkspace, requireWorkspaceWrite, isResponse } from '@/lib/server/workspace';
-import { SupplierInput } from '@/lib/server/validation';
+import { BulkActiveInput, BulkIdsInput, SupplierInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,4 +87,71 @@ export const POST = handler(async (request: Request) => {
     .values({ ...parsed.data, workspaceId: ctx.workspaceId })
     .returning();
   return NextResponse.json({ ...supplier, products: [] }, { status: 201 });
+});
+
+/** POST /api/suppliers/bulk-delete — hapus massal suplier milik workspace. */
+export const DELETE = handler(async (request: Request) => {
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
+
+  const parsed = await parseBody(request, BulkIdsInput);
+  if (!parsed.success) return badRequest(parsed.error);
+
+  // Suplier yang masih punya produk tidak boleh ikut terhapus — produk lain
+  // masih merujuknya (products.supplier_id on delete set null mengosongkan
+  // referensi, tapi data suplier itu tetap dibutuhkan di daftar produk).
+  const inUse = await db
+    .select({ supplierId: productsTable.supplierId })
+    .from(productsTable)
+    .innerJoin(storesTable, eq(productsTable.storeId, storesTable.id))
+    .where(
+      and(
+        inArray(productsTable.supplierId, parsed.data.ids),
+        eq(storesTable.workspaceId, ctx.workspaceId),
+      ),
+    );
+  const usedIds = new Set(inUse.map((row) => row.supplierId));
+
+  const deletable = parsed.data.ids.filter((id) => !usedIds.has(id));
+  // returning() supaya yang dilaporkan hanya yang benar-benar terhapus —
+  // ID milik workspace lain otomatis gugur di WHERE workspace_id.
+  const deleted = deletable.length
+    ? await db
+        .delete(suppliersTable)
+        .where(
+          and(
+            inArray(suppliersTable.id, deletable),
+            eq(suppliersTable.workspaceId, ctx.workspaceId),
+          ),
+        )
+        .returning({ id: suppliersTable.id })
+    : [];
+
+  return NextResponse.json({
+    ok: true,
+    deleted: deleted.map((row) => row.id),
+    skipped: parsed.data.ids.filter((id) => usedIds.has(id)),
+  });
+});
+
+/** PATCH /api/suppliers — aktif/nonaktif massal. */
+export const PATCH = handler(async (request: Request) => {
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
+
+  const parsed = await parseBody(request, BulkActiveInput);
+  if (!parsed.success) return badRequest(parsed.error);
+
+  const updated = await db
+    .update(suppliersTable)
+    .set({ isActive: parsed.data.isActive })
+    .where(
+      and(
+        inArray(suppliersTable.id, parsed.data.ids),
+        eq(suppliersTable.workspaceId, ctx.workspaceId),
+      ),
+    )
+    .returning({ id: suppliersTable.id });
+
+  return NextResponse.json({ ok: true, updated: updated.map((row) => row.id) });
 });

@@ -6,29 +6,35 @@
  * difilter di klien supaya API tetap sederhana.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { CalendarClock, Handshake, Phone } from 'lucide-react';
 import {
+  useBulkDeleteCrmLeads,
+  useBulkUpdateCrmLeads,
   useListCrmClients,
   useListCrmLeads,
   useListCrmProducts,
   useUpdateCrmLead,
 } from '@/lib/api/hooks';
 import type { CrmLeadRow } from '@/lib/api/types';
-import { Badge, PageTitle, Panel, State } from '@/components/ui';
+import { Badge, ConfirmDialog, PageTitle, Panel, State, type ConfirmRequest } from '@/components/ui';
+import { BulkBar, BulkCheckbox, useBulkSelection } from '@/components/bulk-selection';
 import { cn, dateLabel, today, waLink } from '@/lib/format';
 import { CATEGORY_LABEL, CRM_SUB_PAGES, LeadFormModal, SOURCE_LABEL } from '../_shared';
 
 export default function CrmFollowUpPage() {
   const pathname = usePathname();
   const [editing, setEditing] = useState<CrmLeadRow | null>(null);
+  const [confirming, setConfirming] = useState<ConfirmRequest | null>(null);
 
   const clients = useListCrmClients();
   const products = useListCrmProducts({});
   const leads = useListCrmLeads({});
   const updateLead = useUpdateCrmLead();
+  const bulkClose = useBulkUpdateCrmLeads();
+  const bulkDeleteLeads = useBulkDeleteCrmLeads();
 
   const rows = useMemo(() => leads.data?.leads ?? [], [leads.data]);
 
@@ -43,6 +49,28 @@ export default function CrmFollowUpPage() {
         .sort((a, b) => (a.followUpAt ?? '9999').localeCompare(b.followUpAt ?? '9999')),
     [rows],
   );
+
+  const bulk = useBulkSelection();
+  const pendingIds = useMemo(() => pending.map((lead) => lead.id), [pending]);
+  useEffect(() => {
+    bulk.prune(pendingIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingIds]);
+  const selectedIds = useMemo(() => [...bulk.selected], [bulk.selected]);
+
+  const bulkCloseSelected = () =>
+    bulkClose.mutate(
+      { ids: selectedIds, category: 'closing' },
+      { onSuccess: () => bulk.clear() },
+    );
+
+  const bulkDelete = () =>
+    setConfirming({
+      message: `Hapus ${selectedIds.length} lead terpilih? Tindakan ini tidak bisa dibatalkan.`,
+      onConfirm: () => {
+        bulkDeleteLeads.mutate({ ids: selectedIds }, { onSuccess: () => bulk.clear() });
+      },
+    });
 
   const overdueCount = pending.filter((lead) => lead.followUpAt && lead.followUpAt < today()).length;
 
@@ -90,6 +118,13 @@ export default function CrmFollowUpPage() {
             <table>
               <thead>
                 <tr>
+                  <th className="bulk-col">
+                    <BulkCheckbox
+                      checked={bulk.allSelected(pendingIds)}
+                      onChange={() => bulk.toggleAll(pendingIds)}
+                      label="Pilih semua lead"
+                    />
+                  </th>
                   <th>Lead</th>
                   <th>Klien / produk</th>
                   <th>Sumber</th>
@@ -100,7 +135,18 @@ export default function CrmFollowUpPage() {
               </thead>
               <tbody>
                 {pending.map((lead) => (
-                  <tr key={lead.id} data-testid={`row-followup-${lead.id}`}>
+                  <tr
+                    key={lead.id}
+                    className={bulk.isSelected(lead.id) ? 'bulk-row-selected' : undefined}
+                    data-testid={`row-followup-${lead.id}`}
+                  >
+                    <td className="bulk-col">
+                      <BulkCheckbox
+                        checked={bulk.isSelected(lead.id)}
+                        onChange={() => bulk.toggle(lead.id)}
+                        label={`Pilih lead ${lead.name}`}
+                      />
+                    </td>
                     <td>
                       <strong>{lead.name}</strong>
                       {lead.region && <small className="table-sub">{lead.region}</small>}
@@ -191,6 +237,32 @@ export default function CrmFollowUpPage() {
           pending={updateLead.isPending}
         />
       )}
+
+      {confirming && (
+        <ConfirmDialog
+          message={confirming.message}
+          onClose={() => setConfirming(null)}
+          onConfirm={() => {
+            confirming.onConfirm();
+            setConfirming(null);
+          }}
+        />
+      )}
+
+      <BulkBar
+        count={bulk.count}
+        label="lead"
+        onClear={bulk.clear}
+        onDelete={bulkDelete}
+        deleteLabel="Hapus terpilih"
+        actions={[
+          {
+            label: 'Tandai closing',
+            onClick: bulkCloseSelected,
+            disabled: bulkClose.isPending,
+          },
+        ]}
+      />
     </>
   );
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import {
   db,
   invoiceItemsTable,
@@ -8,7 +8,7 @@ import {
 } from '@/lib/db';
 import { badRequest, conflict, handler, parseBody } from '@/lib/server/http';
 import { isResponse, requireWorkspace, requireWorkspaceWrite } from '@/lib/server/workspace';
-import { InvoiceInput } from '@/lib/server/validation';
+import { BulkIdsInput, InvoiceInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -147,4 +147,28 @@ export const POST = handler(async (request: Request) => {
     }
     throw error;
   }
+});
+
+/**
+ * DELETE /api/invoices — hapus massal invoice milik workspace.
+ * Item & pembayaran ikut terhapus via ON DELETE CASCADE.
+ */
+export const DELETE = handler(async (request: Request) => {
+  const ctx = await requireWorkspaceWrite();
+  if (isResponse(ctx)) return ctx;
+
+  const parsed = await parseBody(request, BulkIdsInput);
+  if (!parsed.success) return badRequest(parsed.error);
+
+  const deleted = await db
+    .delete(invoicesTable)
+    .where(
+      and(
+        inArray(invoicesTable.id, parsed.data.ids),
+        eq(invoicesTable.workspaceId, ctx.workspaceId),
+      ),
+    )
+    .returning({ id: invoicesTable.id });
+
+  return NextResponse.json({ ok: true, deleted: deleted.map((row) => row.id) });
 });

@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FileText, Pencil, Plus, Printer, Trash2 } from 'lucide-react';
-import { useDeleteInvoice, useListInvoices } from '@/lib/api/hooks';
+import { useBulkDeleteInvoices, useDeleteInvoice, useListInvoices } from '@/lib/api/hooks';
 import type { InvoiceRow } from '@/lib/api/types';
 import { Badge, Button, ConfirmDialog, Panel, PageTitle, Pagination, State, type ConfirmRequest } from '@/components/ui';
+import { BulkBar, BulkCheckbox, useBulkSelection } from '@/components/bulk-selection';
 import { cn, dateLabel, money, number } from '@/lib/format';
 import { InvoiceFormModal } from './_editor';
 
@@ -13,12 +14,33 @@ const PAGE_SIZE = 10;
 export default function InvoicePage() {
   const invoices = useListInvoices();
   const remove = useDeleteInvoice();
+  const bulkDelete = useBulkDeleteInvoices();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [confirming, setConfirming] = useState<ConfirmRequest | null>(null);
 
   const rows = invoices.data ?? [];
+
+  const bulk = useBulkSelection();
+  const rowIds = useMemo(() => rows.map((row) => row.id), [rows]);
+  useEffect(() => {
+    bulk.prune(rowIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rowIds]);
+  const selectedIds = useMemo(() => [...bulk.selected], [bulk.selected]);
+  const pageIds = useMemo(
+    () => rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((row) => row.id),
+    [rows, page],
+  );
+
+  const bulkDeleteSelected = () =>
+    setConfirming({
+      message: `Hapus ${selectedIds.length} invoice terpilih? Item dan riwayat pembayaran ikut terhapus.`,
+      onConfirm: () => {
+        bulkDelete.mutate({ ids: selectedIds }, { onSuccess: () => bulk.clear() });
+      },
+    });
   const totals = useMemo(
     () => ({
       count: rows.length,
@@ -67,6 +89,13 @@ export default function InvoicePage() {
             <table>
               <thead>
                 <tr>
+                  <th className="bulk-col">
+                    <BulkCheckbox
+                      checked={bulk.allSelected(pageIds)}
+                      onChange={() => bulk.toggleAll(pageIds)}
+                      label="Pilih semua invoice di halaman ini"
+                    />
+                  </th>
                   <th>Nomor</th>
                   <th>Klien</th>
                   <th>Terbit</th>
@@ -83,6 +112,8 @@ export default function InvoicePage() {
                   <InvoiceTableRow
                     key={invoice.id}
                     invoice={invoice}
+                    selected={bulk.isSelected(invoice.id)}
+                    onToggle={() => bulk.toggle(invoice.id)}
                     onEdit={() => {
                       setEditingId(invoice.id);
                       setEditorOpen(true);
@@ -128,22 +159,40 @@ export default function InvoicePage() {
           }}
         />
       )}
+
+      <BulkBar
+        count={bulk.count}
+        label="invoice"
+        onClear={bulk.clear}
+        onDelete={bulkDeleteSelected}
+      />
     </>
   );
 }
 
 function InvoiceTableRow({
   invoice,
+  selected,
+  onToggle,
   onEdit,
   onDelete,
 }: {
   invoice: InvoiceRow;
+  selected: boolean;
+  onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   const settled = invoice.balance <= 0;
   return (
-    <tr data-testid={`row-invoice-${invoice.id}`}>
+    <tr className={selected ? 'bulk-row-selected' : undefined} data-testid={`row-invoice-${invoice.id}`}>
+      <td className="bulk-col">
+        <BulkCheckbox
+          checked={selected}
+          onChange={onToggle}
+          label={`Pilih invoice ${invoice.invoiceNumber}`}
+        />
+      </td>
       <td>
         <strong>{invoice.invoiceNumber}</strong>
         <span className="table-sub">{invoice.title}</span>

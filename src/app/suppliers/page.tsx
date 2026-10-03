@@ -1,11 +1,20 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { MessageCircle, Pencil, Plus, Power, Trash2, Truck } from 'lucide-react';
 import { toast } from 'sonner';
-import { uploadImage, useCreateSupplier, useDeleteSupplier, useListSuppliers, useUpdateSupplier } from '@/lib/api/hooks';
+import {
+  uploadImage,
+  useBulkDeleteSuppliers,
+  useBulkUpdateSuppliers,
+  useCreateSupplier,
+  useDeleteSupplier,
+  useListSuppliers,
+  useUpdateSupplier,
+} from '@/lib/api/hooks';
 import type { Supplier } from '@/lib/api/types';
 import { Badge, Button, ConfirmDialog, Field, ImagePreviewButton, Modal, Panel, PageTitle, Pagination, State, type ConfirmRequest } from '@/components/ui';
+import { BulkBar, BulkCheckbox, useBulkSelection } from '@/components/bulk-selection';
 import { money, number, waLink } from '@/lib/format';
 
 const PAGE_SIZE = 10;
@@ -25,6 +34,10 @@ export default function SuppliersPage() {
   const createSupplier = useCreateSupplier({ onSuccess: close });
   const updateSupplier = useUpdateSupplier({ onSuccess: close });
   const deleteSupplier = useDeleteSupplier();
+  const bulkDeleteSuppliers = useBulkDeleteSuppliers();
+  const bulkUpdateSuppliers = useBulkUpdateSuppliers();
+
+  const bulk = useBulkSelection();
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -55,6 +68,44 @@ export default function SuppliersPage() {
     updateSupplier.mutate({ supplierId: supplier.id, data: { isActive: !supplier.isActive } });
 
   const rows = suppliers.data ?? [];
+
+  const rowIds = useMemo(() => rows.map((row) => row.id), [rows]);
+  useEffect(() => {
+    bulk.prune(rowIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rowIds]);
+  const selectedIds = useMemo(() => [...bulk.selected], [bulk.selected]);
+  const pageIds = useMemo(
+    () => rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((row) => row.id),
+    [rows, page],
+  );
+
+  const bulkDeleteSelected = () =>
+    setConfirming({
+      message: `Hapus ${selectedIds.length} suplier terpilih? Suplier yang masih dipakai produk akan dilewati.`,
+      onConfirm: () => {
+        bulkDeleteSuppliers.mutate(
+          { ids: selectedIds },
+          {
+            onSuccess: (result) => {
+              const skipped = (result as { skipped?: string[] })?.skipped ?? [];
+              if (skipped.length) {
+                toast.warning(
+                  `${skipped.length} suplier dilewati karena masih dipakai produk.`,
+                );
+              }
+              bulk.clear();
+            },
+          },
+        );
+      },
+    });
+
+  const bulkSetActive = (isActive: boolean) =>
+    bulkUpdateSuppliers.mutate(
+      { ids: selectedIds, isActive },
+      { onSuccess: () => bulk.clear() },
+    );
 
   return (
     <>
@@ -92,6 +143,13 @@ export default function SuppliersPage() {
             <table>
               <thead>
                 <tr>
+                  <th className="bulk-col">
+                    <BulkCheckbox
+                      checked={bulk.allSelected(pageIds)}
+                      onChange={() => bulk.toggleAll(pageIds)}
+                      label="Pilih semua suplier di halaman ini"
+                    />
+                  </th>
                   <th>Nama suplier</th>
                   <th>Foto</th>
                   <th>WhatsApp</th>
@@ -105,7 +163,18 @@ export default function SuppliersPage() {
                 {rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((supplier) => {
                   const link = waLink(supplier.whatsapp);
                   return (
-                    <tr key={supplier.id} data-testid={`row-supplier-${supplier.id}`}>
+                    <tr
+                      key={supplier.id}
+                      className={bulk.isSelected(supplier.id) ? 'bulk-row-selected' : undefined}
+                      data-testid={`row-supplier-${supplier.id}`}
+                    >
+                      <td className="bulk-col">
+                        <BulkCheckbox
+                          checked={bulk.isSelected(supplier.id)}
+                          onChange={() => bulk.toggle(supplier.id)}
+                          label={`Pilih suplier ${supplier.name}`}
+                        />
+                      </td>
                       <td>
                         <strong>{supplier.name}</strong>
                         {!supplier.isActive && (
@@ -278,6 +347,25 @@ export default function SuppliersPage() {
           }}
         />
       )}
+
+      <BulkBar
+        count={bulk.count}
+        label="suplier"
+        onClear={bulk.clear}
+        onDelete={bulkDeleteSelected}
+        actions={[
+          {
+            label: 'Aktifkan',
+            onClick: () => bulkSetActive(true),
+            disabled: bulkUpdateSuppliers.isPending,
+          },
+          {
+            label: 'Nonaktifkan',
+            onClick: () => bulkSetActive(false),
+            disabled: bulkUpdateSuppliers.isPending,
+          },
+        ]}
+      />
     </>
   );
 }

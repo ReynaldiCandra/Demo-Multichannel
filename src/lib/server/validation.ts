@@ -15,6 +15,22 @@ const nullableText = z
   .optional()
   .transform((value) => (value === '' || value === undefined ? null : value));
 
+/**
+ * Skema aksi massal (bulk): body berisi daftar ID resource yang dipilih.
+ * Dipakai bersama oleh semua endpoint bulk (produk, suplier, invoice, CRM).
+ */
+export const BulkIdsInput = z.object({
+  ids: z
+    .array(z.string().uuid('ID tidak valid'))
+    .min(1, 'Pilih minimal satu data.')
+    .max(200, 'Maksimal 200 data per aksi.'),
+});
+
+/** Bulk update status aktif/nonaktif (produk & suplier). */
+export const BulkActiveInput = BulkIdsInput.extend({
+  isActive: z.boolean(),
+});
+
 export const StoreInput = z.object({
   name: z.string().min(1, 'Nama brand wajib diisi'),
   channel: z.string().min(1, 'Kanal wajib diisi'),
@@ -221,6 +237,11 @@ export type LiveSessionInputType = z.infer<typeof LiveSessionInput>;
 /* ------------------------------------------------------------------ */
 
 export const CRM_LEAD_CATEGORIES = ['hot', 'warm', 'closing', 'follow_up'] as const;
+
+/** Bulk pindah kategori pipeline lead CRM. */
+export const BulkCategoryInput = BulkIdsInput.extend({
+  category: z.enum(CRM_LEAD_CATEGORIES),
+});
 
 export const CrmClientInput = z.object({
   name: z.string().trim().min(1, 'Nama klien wajib diisi').max(120),

@@ -956,3 +956,21 @@ h2 { font: 700 16px/1.2 var(--app-font-serif); letter-spacing: -.02em; }
 .toast-icon-danger { color: hsl(var(--destructive)); }
 [data-sonner-toast] { border-radius: 12px; font-size: 12px; font-weight: 600; }
 [data-sonner-toast] [data-icon] { display: inline-grid; place-items: center; }
+
+/* ---------------------------------------------------------------- */
+/* Aksi massal (bulk) — bar mengambang + checkbox seleksi           */
+/* ---------------------------------------------------------------- */
+.bulk-bar { position: fixed; z-index: 18; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; align-items: center; gap: 18px; padding: 10px 14px; border-radius: 13px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border: 1px solid hsl(222 42% 22%); box-shadow: 0 14px 40px hsl(222 45% 13% / .35); animation: rise-in .2s ease; max-width: calc(100vw - 40px); }
+.bulk-bar-count { font-size: 11px; white-space: nowrap; }
+.bulk-bar-count b { font: 600 14px var(--app-font-mono); margin-right: 4px; }
+.bulk-bar-actions { display: flex; align-items: center; gap: 8px; }
+.bulk-bar .btn-secondary { background: hsl(var(--primary-foreground) / .14); color: hsl(var(--primary-foreground)); border-color: hsl(var(--primary-foreground) / .3); }
+.bulk-bar .btn-secondary:hover { background: hsl(var(--primary-foreground) / .24); }
+.bulk-bar .icon-btn { color: hsl(var(--primary-foreground) / .75); }
+.bulk-bar .icon-btn:hover { background: hsl(var(--primary-foreground) / .14); color: hsl(var(--primary-foreground)); }
+.bulk-check { width: 15px; height: 15px; accent-color: hsl(var(--primary)); cursor: pointer; }
+.bulk-row-selected > td { background: hsl(var(--accent) / .08) !important; }
+.crm-card-selected { border-color: hsl(var(--accent)) !important; box-shadow: 0 0 0 2px hsl(var(--accent) / .25); }
+.bulk-col { width: 34px; }
+td.bulk-col { padding-right: 0; }
+@media (max-width: 700px) { .bulk-bar { gap: 10px; padding: 9px 11px; width: calc(100vw - 30px); justify-content: space-between; }.bulk-bar-actions { gap: 6px; } }

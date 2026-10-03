@@ -1,9 +1,11 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Pencil, Plus, Power, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
+  useBulkDeleteProducts,
+  useBulkUpdateProducts,
   useCreateProduct,
   useCreateStore,
   useDeleteProduct,
@@ -18,6 +20,7 @@ import {
 } from '@/lib/api/hooks';
 import type { ProductRow, StoreRow } from '@/lib/api/types';
 import { Badge, Button, ConfirmDialog, Field, ImagePreviewButton, Modal, Panel, PageTitle, Pagination, State, type ConfirmRequest } from '@/components/ui';
+import { BulkBar, BulkCheckbox, useBulkSelection } from '@/components/bulk-selection';
 import { money, number } from '@/lib/format';
 
 type Editing = ProductRow | StoreRow | null;
@@ -59,6 +62,8 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
   };
 
   const createStore = useCreateStore({ onSuccess: close });
+  const bulkDeleteProducts = useBulkDeleteProducts();
+  const bulkUpdateProducts = useBulkUpdateProducts();
   const createStoreFromProduct = useCreateStore({
     onSuccess: (store) => {
       setNewStoreOpen(false);
@@ -161,6 +166,46 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
 
   const editingProduct = isProducts ? (editing as ProductRow | null) : null;
   const editingStore = isProducts ? null : (editing as StoreRow | null);
+
+  // Seleksi massal hanya aktif di mode produk.
+  const bulk = useBulkSelection();
+  const visibleProductIds = useMemo(() => visibleProducts.map((item) => item.id), [visibleProducts]);
+  useEffect(() => {
+    bulk.prune(visibleProductIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleProductIds]);
+  const selectedProductIds = useMemo(() => [...bulk.selected], [bulk.selected]);
+  const bulkPageIds = useMemo(
+    () => visibleProducts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((item) => item.id),
+    [visibleProducts, page],
+  );
+
+  const bulkDeleteSelected = () =>
+    setConfirming({
+      message: `Hapus ${selectedProductIds.length} produk terpilih? Produk yang sudah punya penjualan akan dilewati.`,
+      onConfirm: () => {
+        bulkDeleteProducts.mutate(
+          { ids: selectedProductIds },
+          {
+            onSuccess: (result) => {
+              const skipped = (result as { skipped?: string[] })?.skipped ?? [];
+              if (skipped.length) {
+                toast.warning(
+                  `${skipped.length} produk dilewati karena sudah dipakai dalam penjualan.`,
+                );
+              }
+              bulk.clear();
+            },
+          },
+        );
+      },
+    });
+
+  const bulkSetActive = (isActive: boolean) =>
+    bulkUpdateProducts.mutate(
+      { ids: selectedProductIds, isActive },
+      { onSuccess: () => bulk.clear() },
+    );
 
   const openCreate = () => {
     setEditing(null);
@@ -328,6 +373,13 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
                 <tr>
                   {isProducts ? (
                     <>
+                      <th className="bulk-col">
+                        <BulkCheckbox
+                          checked={bulk.allSelected(bulkPageIds)}
+                          onChange={() => bulk.toggleAll(bulkPageIds)}
+                          label="Pilih semua produk di halaman ini"
+                        />
+                      </th>
                       <th>Produk</th>
                       <th>Foto</th>
                       <th>Toko</th>
@@ -353,7 +405,18 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
               <tbody>
                 {isProducts
                  ? visibleProducts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((item) => (
-                      <tr key={item.id} data-testid={`row-products-${item.id}`}>
+                      <tr
+                        key={item.id}
+                        className={bulk.isSelected(item.id) ? 'bulk-row-selected' : undefined}
+                        data-testid={`row-products-${item.id}`}
+                      >
+                        <td className="bulk-col">
+                          <BulkCheckbox
+                            checked={bulk.isSelected(item.id)}
+                            onChange={() => bulk.toggle(item.id)}
+                            label={`Pilih produk ${item.name}`}
+                          />
+                        </td>
                         <td>
                           <strong>{item.name}</strong>
                           <small className="table-sub">
@@ -476,6 +539,27 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
            />
          )}
       </Panel>
+
+      {isProducts && (
+        <BulkBar
+          count={bulk.count}
+          label="produk"
+          onClear={bulk.clear}
+          onDelete={bulkDeleteSelected}
+          actions={[
+            {
+              label: 'Aktifkan',
+              onClick: () => bulkSetActive(true),
+              disabled: bulkUpdateProducts.isPending,
+            },
+            {
+              label: 'Arsipkan',
+              onClick: () => bulkSetActive(false),
+              disabled: bulkUpdateProducts.isPending,
+            },
+          ]}
+        />
+      )}
 
       {open && (
         <Modal

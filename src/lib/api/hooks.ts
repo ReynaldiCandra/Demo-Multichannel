@@ -253,6 +253,22 @@ export function useDeleteInvoice(options?: MutationOpts<unknown, { invoiceId: st
   );
 }
 
+/** Hapus massal invoice (item & pembayaran ikut via cascade). */
+export function useBulkDeleteInvoices(
+  options?: MutationOpts<unknown, { ids: string[] }>,
+) {
+  return useInvalidating(
+    ({ ids }) =>
+      request<{ ok: boolean; deleted: string[] }>('/invoices/bulk-delete', {
+        method: 'POST',
+        body: { ids },
+      }),
+    ['invoices'],
+    options,
+    (vars) => ({ kind: 'deleted' as const, message: `${vars.ids.length} invoice dihapus` }),
+  );
+}
+
 /* --------------------------------- kanban -------------------------------- */
 
 export const getListTasksQueryKey = () => ['tasks'] as const;
@@ -522,6 +538,41 @@ export function useDeleteProduct(
   );
 }
 
+/** Hapus massal produk. Produk yang punya riwayat penjualan dilaporkan lewat skipped. */
+export function useBulkDeleteProducts(
+  options?: MutationOpts<unknown, { ids: string[] }>,
+) {
+  return useInvalidating(
+    ({ ids }) =>
+      request<{ ok: boolean; deleted: string[]; skipped: string[] }>('/products/bulk-delete', {
+        method: 'POST',
+        body: { ids },
+      }),
+    ['products', 'stores', 'suppliers', 'sales-report', 'store-performance'],
+    options,
+    (vars) => ({ kind: 'deleted' as const, message: `${vars.ids.length} produk dihapus` }),
+  );
+}
+
+/** Aktif/nonaktif massal produk. */
+export function useBulkUpdateProducts(
+  options?: MutationOpts<unknown, { ids: string[]; isActive: boolean }>,
+) {
+  return useInvalidating(
+    ({ ids, isActive }) =>
+      request<unknown>('/products/bulk-update', {
+        method: 'POST',
+        body: { ids, isActive },
+      }),
+    ['products', 'sales-report', 'store-performance'],
+    options,
+    (vars) => ({
+      kind: 'updated' as const,
+      message: `${vars.ids.length} produk ${vars.isActive ? 'diaktifkan' : 'dinonaktifkan'}`,
+    }),
+  );
+}
+
 export function useCreateSale(options?: MutationOpts<SaleRow, { data: unknown }>) {
   return useInvalidating(
     ({ data }) =>      request<SaleRow>('/sales', { method: 'POST', body: data }),
@@ -691,6 +742,41 @@ export function useDeleteSupplier(options?: MutationOpts<{ ok: boolean }, { supp
     ['suppliers', 'products'],
     options,
     { kind: 'deleted', message: 'Suplier dihapus' },
+  );
+}
+
+/** Hapus massal suplier. Suplier yang masih dipakai produk dilaporkan lewat skipped. */
+export function useBulkDeleteSuppliers(
+  options?: MutationOpts<unknown, { ids: string[] }>,
+) {
+  return useInvalidating(
+    ({ ids }) =>
+      request<{ ok: boolean; deleted: string[]; skipped: string[] }>('/suppliers/bulk-delete', {
+        method: 'POST',
+        body: { ids },
+      }),
+    ['suppliers', 'products'],
+    options,
+    (vars) => ({ kind: 'deleted' as const, message: `${vars.ids.length} suplier dihapus` }),
+  );
+}
+
+/** Aktif/nonaktif massal suplier. */
+export function useBulkUpdateSuppliers(
+  options?: MutationOpts<unknown, { ids: string[]; isActive: boolean }>,
+) {
+  return useInvalidating(
+    ({ ids, isActive }) =>
+      request<unknown>('/suppliers/bulk-update', {
+        method: 'POST',
+        body: { ids, isActive },
+      }),
+    ['suppliers', 'products'],
+    options,
+    (vars) => ({
+      kind: 'updated' as const,
+      message: `${vars.ids.length} suplier ${vars.isActive ? 'diaktifkan' : 'dinonaktifkan'}`,
+    }),
   );
 }
 
@@ -883,6 +969,66 @@ export function useDeleteCrmLead(options?: MutationOpts<unknown, { leadId: strin
     ({ leadId }) => request(`/crm/leads/${leadId}`, { method: 'DELETE' }),
     options,
     { kind: 'deleted', message: 'Lead dihapus' },
+  );
+}
+
+/** Hapus massal lead CRM. */
+export function useBulkDeleteCrmLeads(
+  options?: MutationOpts<unknown, { ids: string[] }>,
+) {
+  return useInvalidateCrm(
+    ({ ids }) =>
+      request<{ ok: boolean; deleted: string[] }>('/crm/leads/bulk-delete', {
+        method: 'POST',
+        body: { ids },
+      }),
+    options,
+    (vars) => ({ kind: 'deleted' as const, message: `${vars.ids.length} lead dihapus` }),
+  );
+}
+
+/** Pindah kategori pipeline massal (hot/warm/closing/follow_up). */
+export function useBulkUpdateCrmLeads(
+  options?: MutationOpts<unknown, { ids: string[]; category: string }>,
+) {
+  return useInvalidateCrm(
+    ({ ids, category }) =>
+      request<unknown>('/crm/leads/bulk-update', {
+        method: 'POST',
+        body: { ids, category },
+      }),
+    options,
+    (vars) => ({ kind: 'updated' as const, message: `${vars.ids.length} lead diperbarui` }),
+  );
+}
+
+/** Hapus massal klien CRM (produk & leads ikut terhapus). */
+export function useBulkDeleteCrmClients(
+  options?: MutationOpts<unknown, { ids: string[] }>,
+) {
+  return useInvalidateCrm(
+    ({ ids }) =>
+      request<{ ok: boolean; deleted: string[] }>('/crm/clients/bulk-delete', {
+        method: 'POST',
+        body: { ids },
+      }),
+    options,
+    (vars) => ({ kind: 'deleted' as const, message: `${vars.ids.length} klien dihapus` }),
+  );
+}
+
+/** Hapus massal produk iklan CRM. */
+export function useBulkDeleteCrmProducts(
+  options?: MutationOpts<unknown, { ids: string[] }>,
+) {
+  return useInvalidateCrm(
+    ({ ids }) =>
+      request<{ ok: boolean; deleted: string[] }>('/crm/products/bulk-delete', {
+        method: 'POST',
+        body: { ids },
+      }),
+    options,
+    (vars) => ({ kind: 'deleted' as const, message: `${vars.ids.length} produk iklan dihapus` }),
   );
 }
 

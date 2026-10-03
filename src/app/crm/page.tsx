@@ -6,11 +6,13 @@
  * polanya sama seperti KEUANGAN yang memisah Settlement dan Invoice.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { CalendarClock, Phone, Plus } from 'lucide-react';
 import {
+  useBulkDeleteCrmLeads,
+  useBulkUpdateCrmLeads,
   useCreateCrmLead,
   useDeleteCrmLead,
   useListCrmClients,
@@ -19,7 +21,8 @@ import {
   useUpdateCrmLead,
 } from '@/lib/api/hooks';
 import type { CrmLeadCategory, CrmLeadRow } from '@/lib/api/types';
-import { Badge, Button, ConfirmDialog, PageTitle, Panel, State, type ConfirmRequest } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, Field, Modal, PageTitle, Panel, State, type ConfirmRequest } from '@/components/ui';
+import { BulkBar, BulkCheckbox, useBulkSelection } from '@/components/bulk-selection';
 import { cn, dateLabel, today } from '@/lib/format';
 import {
   CATEGORY_LABEL,
@@ -40,6 +43,7 @@ export default function CrmPipelinePage() {
     open: false,
     lead: null,
   });
+  const [bulkCategoryOpen, setBulkCategoryOpen] = useState(false);
 
   const clients = useListCrmClients();
   const products = useListCrmProducts({});
@@ -52,9 +56,30 @@ export default function CrmPipelinePage() {
   const createLead = useCreateCrmLead();
   const updateLead = useUpdateCrmLead();
   const deleteLead = useDeleteCrmLead();
+  const bulkDeleteLeads = useBulkDeleteCrmLeads();
+  const bulkUpdateLeads = useBulkUpdateCrmLeads();
 
   const rows = useMemo(() => leads.data?.leads ?? [], [leads.data]);
   const counts = leads.data?.counts;
+
+  const bulk = useBulkSelection();
+  const visibleIds = useMemo(() => rows.map((lead) => lead.id), [rows]);
+  // Bersihkan seleksi lead yang tidak lagi ada (sudah dihapus/filter berubah).
+  useEffect(() => {
+    bulk.prune(visibleIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleIds]);
+  const selectedIds = useMemo(() => [...bulk.selected], [bulk.selected]);
+  const bulkDelete = () =>
+    setConfirming({
+      message: `Hapus ${selectedIds.length} lead terpilih? Tindakan ini tidak bisa dibatalkan.`,
+      onConfirm: () => {
+        bulkDeleteLeads.mutate(
+          { ids: selectedIds },
+          { onSuccess: () => bulk.clear() },
+        );
+      },
+    });
 
   const grouped = useMemo(() => {
     const map: Record<CrmLeadCategory, CrmLeadRow[]> = {
@@ -172,9 +197,20 @@ export default function CrmPipelinePage() {
                   </header>
                   <div className="crm-cards">
                     {grouped[category].map((lead) => (
-                      <article key={lead.id} className="crm-card" data-testid={`crm-card-${lead.id}`}>
+                      <article
+                        key={lead.id}
+                        className={cn('crm-card', bulk.isSelected(lead.id) && 'crm-card-selected')}
+                        data-testid={`crm-card-${lead.id}`}
+                      >
                         <div className="kanban-card-top">
-                          <span className="kanban-card-title">{lead.name}</span>
+                          <span className="kanban-card-title">
+                            <BulkCheckbox
+                              checked={bulk.isSelected(lead.id)}
+                              onChange={() => bulk.toggle(lead.id)}
+                              label={`Pilih lead ${lead.name}`}
+                            />{' '}
+                            {lead.name}
+                          </span>
                           <div className="kanban-card-actions">
                             <button
                               type="button"
@@ -284,6 +320,53 @@ export default function CrmPipelinePage() {
             setConfirming(null);
           }}
         />
+      )}
+
+      <BulkBar
+        count={bulk.count}
+        label="lead"
+        onClear={bulk.clear}
+        onDelete={bulkDelete}
+        actions={[
+          {
+            label: 'Pindah kategori…',
+            onClick: () => setBulkCategoryOpen(true),
+            disabled: bulkUpdateLeads.isPending,
+          },
+        ]}
+      />
+
+      {bulkCategoryOpen && (
+        <Modal title={`Pindah ${selectedIds.length} lead`} onClose={() => setBulkCategoryOpen(false)}>
+          <div className="form-grid">
+            <Field label="Kategori tujuan">
+              <select
+                defaultValue=""
+                onChange={(event) => {
+                  const category = event.target.value;
+                  if (!category) return;
+                  bulkUpdateLeads.mutate(
+                    { ids: selectedIds, category },
+                    {
+                      onSuccess: () => {
+                        bulk.clear();
+                        setBulkCategoryOpen(false);
+                      },
+                    },
+                  );
+                }}
+                data-testid="select-bulk-lead-category"
+              >
+                <option value="">Pilih kategori…</option>
+                {CRM_CATEGORIES.map((key) => (
+                  <option key={key} value={key}>
+                    {CATEGORY_LABEL[key]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        </Modal>
       )}
     </>
   );
