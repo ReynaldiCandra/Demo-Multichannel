@@ -2,29 +2,22 @@ export function cn(...classes: Array<string | false | undefined | null>) {
   return classes.filter(Boolean).join(' ');
 }
 
-/**
- * Class warna khas marketplace dari nama kanal bebas ("TikTok Shop",
- * "tiktok", "Tokopedia", dst). Fallback warna berurutan dipindah ke sini
- * supaya pemanggil tidak perlu menghitung index modulo.
- */
-const CHANNEL_BRANDS: Array<{ match: RegExp; cssClass: string }> = [
-  { match: /shopee/i, cssClass: 'marketplace-brand-shopee' },
-  { match: /tiktok/i, cssClass: 'marketplace-brand-tiktok' },
-  { match: /lazada/i, cssClass: 'marketplace-brand-lazada' },
-  { match: /tokopedia/i, cssClass: 'marketplace-brand-tokopedia' },
-  { match: /blibli/i, cssClass: 'marketplace-brand-blibli' },
-  { match: /etsy/i, cssClass: 'marketplace-brand-etsy' },
-  { match: /amazon/i, cssClass: 'marketplace-brand-amazon' },
-  { match: /instagram|ig\b/i, cssClass: 'marketplace-brand-instagram' },
-  { match: /whatsapp|wa\b/i, cssClass: 'marketplace-brand-whatsapp' },
-  { match: /website|web|.lt\b/i, cssClass: 'marketplace-brand-website' },
-];
+import { BRAND_LOGOS } from './brand-logos';
 
-export function channelBrandClass(channel: string, fallbackIndex = 0): string {
-  for (const brand of CHANNEL_BRANDS) {
-    if (brand.match.test(channel)) return brand.cssClass;
+/**
+ * Logo marketplace asli (SVG simple-icons) + warna brand dari nama kanal
+ * bebas ("TikTok Shop", "shopee", dst). Kanal yang ikonnya dihapus dari
+ * simple-icons karena permintaan trademark (Lazada, Tokopedia, Amazon) →
+ * null, supaya pemanggil pakai fallback inisial berwarna brand.
+ */
+export function channelBrandLogo(channel: string): { hex: string; path: string } | null {
+  const key = channel.toLowerCase().trim();
+  if (BRAND_LOGOS[key]) return BRAND_LOGOS[key];
+  // Pencocokan santai: "TikTok Shop" → tiktok, "Gumroad (Digital)" → gumroad.
+  for (const [brand, logo] of Object.entries(BRAND_LOGOS)) {
+    if (key.includes(brand)) return logo;
   }
-  return `marketplace-avatar-${fallbackIndex % 4}`;
+  return null;
 }
 
 export const money = (value: number | string | null | undefined = 0) =>

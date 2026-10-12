@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ArrowDownRight, ArrowUpRight, ChevronRight, Clock, Minus, RefreshCw, TrendingUp } from 'lucide-react';
 import { useStorePerformance } from '@/lib/api/hooks';
-import { channelBrandClass, cn, monthLabel, monthNow, today } from '@/lib/format';
+import { channelBrandLogo, cn, monthLabel, monthNow, today } from '@/lib/format';
 import {
   buildChannelInsight,
   formatGrowth,
@@ -159,7 +159,6 @@ export function RealtimeInsightBanner({ month }: { month: string }) {
                 channel={leader.channel}
                 image={leader.storeImage}
                 className="rt-leader-badge"
-                fallbackIndex={0}
               />
               <strong className="rt-leader-growth">
                 {formatGrowth(leader.growth ?? 0)}
@@ -231,7 +230,6 @@ function ChannelTile({
         channel={row.channel}
         image={row.storeImage}
         className="rt-avatar"
-        fallbackIndex={index}
       />
       <span className="rt-tile-copy">
         <span className="rt-tile-name" title={row.channel}>{row.channel}</span>
@@ -253,19 +251,17 @@ function ChannelTile({
 }
 
 /**
- * Avatar kanal: logo toko kalau ada; kalau tidak, placeholder warna khas
- * marketplace (Shopee merah, TikTok hitam, Lazada biru, dst) dengan inisial.
+ * Avatar kanal, prioritas: (1) logo toko hasil upload, (2) logo marketplace
+ * asli (simple-icons) di atas tile warna brand, (3) fallback inisial.
  */
 function ChannelAvatar({
   channel,
   image,
   className,
-  fallbackIndex = 0,
 }: {
   channel: string;
   image: string | null;
   className?: string;
-  fallbackIndex?: number;
 }) {
   if (image) {
     return (
@@ -277,8 +273,22 @@ function ChannelAvatar({
       />
     );
   }
+  const brand = channelBrandLogo(channel);
+  if (brand) {
+    return (
+      <span
+        className={cn('marketplace-avatar', className)}
+        style={{ background: `#${brand.hex}` }}
+        title={channel}
+      >
+        <svg viewBox="0 0 24 24" fill="hsl(0 0% 100%)" className="rt-brand-logo" aria-hidden="true">
+          <path d={brand.path} />
+        </svg>
+      </span>
+    );
+  }
   return (
-    <span className={cn('marketplace-avatar', channelBrandClass(channel, fallbackIndex), className)}>
+    <span className={cn('marketplace-avatar', className)} title={channel}>
       {channel.slice(0, 1).toUpperCase()}
     </span>
   );

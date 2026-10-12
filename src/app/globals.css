@@ -853,6 +853,7 @@ h2 { font: 700 16px/1.2 var(--app-font-serif); letter-spacing: -.02em; }
 .rt-tile { flex: 1 1 110px; min-width: 100px; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: hsl(0 0% 100% / .1); border: 1px solid hsl(0 0% 100% / .16); min-width: 0; }
 .rt-tile-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .rt-avatar { width: 32px; height: 32px; border-radius: 9px; font-size: 12px; flex-shrink: 0; }
+.rt-brand-logo { width: 17px; height: 17px; display: block; }
 
 /* Tile kanal kini link: hover mengangkat + logo toko isi penuh avatar. */
 .rt-tile-link { text-decoration: none; transition: background .15s ease, border-color .15s ease, transform .15s ease; }
