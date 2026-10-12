@@ -33,6 +33,7 @@ import type {
   CrmClientRow,
   CrmLeadsResponse,
   CrmProductRow,
+  WorkspaceUserRow,
 } from './types';
 
 /* ------------------------------------------------------------------ */
@@ -1030,6 +1031,52 @@ export function useBulkDeleteCrmProducts(
     options,
     (vars) => ({ kind: 'deleted' as const, message: `${vars.ids.length} produk iklan dihapus` }),
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* akun & pengguna                                                     */
+/* ------------------------------------------------------------------ */
+
+/** Daftar user satu workspace (hanya role owner yang boleh memanggil). */
+export function useListWorkspaceUsers() {
+  return useQuery({
+    queryKey: getUsersQueryKey(),
+    queryFn: ({ signal }) =>
+      request<{ users: WorkspaceUserRow[] }>('/users', { signal }),
+    select: (data) => data.users,
+  });
+}
+
+export const getUsersQueryKey = () => ['workspace-users'] as const;
+
+/** Tambah user baru ke workspace owner yang sedang login. */
+export function useCreateWorkspaceUser(
+  options?: MutationOpts<WorkspaceUserRow, { data: unknown }>,
+) {
+  const queryClient = useQueryClient();
+  return useMutation<{ user: WorkspaceUserRow }, Error, { data: unknown }>({
+    mutationFn: ({ data }) =>
+      request<{ user: WorkspaceUserRow }>('/users', { method: 'POST', body: data }),
+    onSuccess: (data, variables, onMutateResult, context) => {
+      queryClient.invalidateQueries({ queryKey: getUsersQueryKey() });
+      toast.success('User baru berhasil ditambahkan', { icon: toastIcon('created' as ToastKind) });
+      options?.onSuccess?.(data.user, variables, onMutateResult, context);
+    },
+  });
+}
+
+/** Ganti password akun sendiri (wajib tahu password lama). */
+export function useChangePassword(
+  options?: MutationOpts<{ ok: boolean }, { data: unknown }>,
+) {
+  return useMutation<{ ok: boolean }, Error, { data: unknown }>({
+    mutationFn: ({ data }) =>
+      request<{ ok: boolean }>('/auth/change-password', { method: 'POST', body: data }),
+    onSuccess: (data, variables, onMutateResult, context) => {
+      toast.success('Password berhasil diganti', { icon: toastIcon('updated' as ToastKind) });
+      options?.onSuccess?.(data, variables, onMutateResult, context);
+    },
+  });
 }
 
 /* ------------------------------------------------------------------ */

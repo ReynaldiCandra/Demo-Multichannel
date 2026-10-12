@@ -157,6 +157,21 @@ export type CrmAlertsResponse = {
   items: CrmAlertItem[];
 };
 
+/* ------------------------------------------------------------------ */
+/* Akun & pengguna                                                      */
+/* ------------------------------------------------------------------ */
+
+/** Baris daftar user workspace; password hash tidak pernah ikut keluar. */
+export type WorkspaceUserRow = {
+  id: string;
+  email: string;
+  name: string;
+  /** owner = akses penuh; demo = hanya baca. */
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+};
+
 export type JobSummary = {
   id: string;
   clientName: string;

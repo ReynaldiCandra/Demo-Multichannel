@@ -1,8 +1,16 @@
 'use client';
 
-import { Check, LockKeyhole, Power, Settings2 } from 'lucide-react';
-import { useListModules, useSession, useUpdateModule } from '@/lib/api/hooks';
-import { Badge, Panel, PageTitle, State } from '@/components/ui';
+import { useState, type FormEvent } from 'react';
+import { Check, LockKeyhole, Power, Settings2, UserPlus, KeyRound } from 'lucide-react';
+import {
+  useChangePassword,
+  useCreateWorkspaceUser,
+  useListModules,
+  useListWorkspaceUsers,
+  useSession,
+  useUpdateModule,
+} from '@/lib/api/hooks';
+import { Badge, Button, Field, Panel, PageTitle, State } from '@/components/ui';
 
 export default function SettingsPage() {
   const modules = useListModules();
@@ -10,6 +18,8 @@ export default function SettingsPage() {
   const update = useUpdateModule();
   const isDemo = session.data?.role === 'demo';
   const readOnly = session.isLoading || isDemo;
+
+  const isOwner = session.data?.role === 'owner';
 
   return (
     <>
@@ -37,6 +47,12 @@ export default function SettingsPage() {
           </div>
         )}
       </Panel>
+
+      <Panel className="account-security">
+        <AccountSecurity isDemo={isDemo} />
+      </Panel>
+
+      {isOwner && <WorkspaceUsers />}
 
       <div className="settings-grid">
         {modules.isLoading ? (
@@ -97,5 +113,195 @@ export default function SettingsPage() {
         )}
       </div>
     </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Ganti password sendiri                                              */
+/* ------------------------------------------------------------------ */
+
+function AccountSecurity({ isDemo }: { isDemo: boolean }) {
+  const session = useSession();
+  const changePassword = useChangePassword({
+    onSuccess: () => setForm({ currentPassword: '', newPassword: '', confirm: '' }),
+  });
+  const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirm: '' });
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+    if (form.newPassword !== form.confirm) {
+      setError('Konfirmasi password tidak sama');
+      return;
+    }
+    changePassword.mutate({
+      data: { currentPassword: form.currentPassword, newPassword: form.newPassword },
+    });
+  };
+
+  return (
+    <section>
+      <div className="section-head">
+        <span className="settings-symbol settings-symbol-sm">
+          <KeyRound size={16} />
+        </span>
+        <div>
+          <h2>Ganti password</h2>
+          <p>
+            {session.data?.email ? `Akun ${session.data.email}` : 'Akun kamu'} — password baru
+            minimal 8 karakter.
+          </p>
+        </div>
+      </div>
+      <form className="account-form" onSubmit={submit}>
+        <Field label="Password lama">
+          <input
+            type="password"
+            required
+            autoComplete="current-password"
+            value={form.currentPassword}
+            onChange={(event) => setForm({ ...form, currentPassword: event.target.value })}
+          />
+        </Field>
+        <Field label="Password baru">
+          <input
+            type="password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            value={form.newPassword}
+            onChange={(event) => setForm({ ...form, newPassword: event.target.value })}
+          />
+        </Field>
+        <Field label="Ulangi password baru">
+          <input
+            type="password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            value={form.confirm}
+            onChange={(event) => setForm({ ...form, confirm: event.target.value })}
+          />
+        </Field>
+        <div className="account-actions">
+          {error && <span className="account-error">{error}</span>}
+          {changePassword.isError && (
+            <span className="account-error">
+              {(changePassword.error as Error)?.message || 'Gagal mengganti password'}
+            </span>
+          )}
+          <Button type="submit" disabled={changePassword.isPending || isDemo}>
+            {changePassword.isPending ? 'Menyimpan…' : 'Simpan password baru'}
+          </Button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Daftar & tambah user workspace (owner saja)                         */
+/* ------------------------------------------------------------------ */
+
+function WorkspaceUsers() {
+  const users = useListWorkspaceUsers();
+  const create = useCreateWorkspaceUser({
+    onSuccess: () => setForm({ email: '', name: '', password: '', role: 'demo' }),
+  });
+  const [form, setForm] = useState({ email: '', name: '', password: '', role: 'demo' });
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+    create.mutate(
+      { data: form },
+      {
+        onError: (err) =>
+          setError(
+            (err as Error & { message?: string })?.message ||
+              'Gagal menambah user — cek koneksi atau email yang sudah terdaftar.',
+          ),
+      },
+    );
+  };
+
+  return (
+    <Panel className="workspace-users">
+      <div className="section-head">
+        <span className="settings-symbol settings-symbol-sm">
+          <UserPlus size={16} />
+        </span>
+        <div>
+          <h2>Pengguna workspace</h2>
+          <p>Role demo hanya bisa melihat data — semua tombol simpan/hapus tetap ditolak server.</p>
+        </div>
+      </div>
+
+      {users.isLoading ? (
+        <State type="loading" />
+      ) : users.isError ? (
+        <State type="error" onRetry={() => users.refetch()} />
+      ) : (
+        <>
+          <ul className="workspace-user-list" data-testid="list-workspace-users">
+            {users.data?.map((user) => (
+              <li key={user.id}>
+                <span className="workspace-user-name">{user.name}</span>
+                <span className="workspace-user-email">{user.email}</span>
+                <Badge tone={user.role === 'owner' ? 'good' : 'neutral'}>{user.role}</Badge>
+              </li>
+            ))}
+          </ul>
+
+          <form className="account-form" onSubmit={submit}>
+            <Field label="Email">
+              <input
+                type="email"
+                required
+                placeholder="staf@gmail.com"
+                value={form.email}
+                onChange={(event) => setForm({ ...form, email: event.target.value })}
+              />
+            </Field>
+            <Field label="Nama">
+              <input
+                type="text"
+                required
+                placeholder="Nama staf"
+                value={form.name}
+                onChange={(event) => setForm({ ...form, name: event.target.value })}
+              />
+            </Field>
+            <Field label="Password awal" hint="Minimal 8 karakter — minta user ganti sendiri nanti.">
+              <input
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={form.password}
+                onChange={(event) => setForm({ ...form, password: event.target.value })}
+              />
+            </Field>
+            <Field label="Role">
+              <select
+                value={form.role}
+                onChange={(event) => setForm({ ...form, role: event.target.value })}
+              >
+                <option value="demo">demo — hanya lihat</option>
+                <option value="owner">owner — akses penuh</option>
+              </select>
+            </Field>
+            <div className="account-actions">
+              {error && <span className="account-error">{error}</span>}
+              <Button type="submit" disabled={create.isPending}>
+                {create.isPending ? 'Menyimpan…' : 'Tambah user'}
+              </Button>
+            </div>
+          </form>
+        </>
+      )}
+    </Panel>
   );
 }

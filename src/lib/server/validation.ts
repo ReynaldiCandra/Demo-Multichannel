@@ -31,6 +31,36 @@ export const BulkActiveInput = BulkIdsInput.extend({
   isActive: z.boolean(),
 });
 
+/* ------------------------------------------------------------------ */
+/* Akun & pengguna (halaman Pengaturan)                                */
+/* ------------------------------------------------------------------ */
+
+/** Ganti password sendiri: wajib tahu password lama dulu. */
+export const ChangePasswordInput = z
+  .object({
+    currentPassword: z.string().min(1, 'Password lama wajib diisi'),
+    newPassword: z
+      .string()
+      .min(8, 'Password baru minimal 8 karakter')
+      .max(72, 'Password baru maksimal 72 karakter (batas bcrypt)'),
+  })
+  .refine((data) => data.currentPassword !== data.newPassword, {
+    message: 'Password baru harus berbeda dari password lama',
+    path: ['newPassword'],
+  });
+
+/** Tambah user baru ke workspace owner yang sedang login. */
+export const UserCreateInput = z.object({
+  email: z.string().trim().toLowerCase().email('Format email tidak valid').max(120),
+  name: z.string().trim().min(1, 'Nama wajib diisi').max(80),
+  password: z
+    .string()
+    .min(8, 'Password minimal 8 karakter')
+    .max(72, 'Password maksimal 72 karakter (batas bcrypt)'),
+  /** owner = akses penuh; demo = hanya baca (server menolak semua aksi tulis). */
+  role: z.enum(['owner', 'demo']).default('owner'),
+});
+
 export const StoreInput = z.object({
   name: z.string().min(1, 'Nama brand wajib diisi'),
   channel: z.string().min(1, 'Kanal wajib diisi'),
