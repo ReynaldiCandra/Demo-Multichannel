@@ -41,7 +41,12 @@ export async function verifySessionToken(token: string): Promise<SessionUser | n
       id: payload.sub,
       email: String(payload.email ?? ''),
       name: String(payload.name ?? ''),
-      role: payload.role === 'demo' ? 'demo' : 'owner',
+      role:
+        payload.role === 'demo'
+          ? 'demo'
+          : payload.role === 'pengguna'
+            ? 'pengguna'
+            : 'owner',
       workspaceId:
         typeof payload.workspaceId === 'string' && payload.workspaceId
           ? payload.workspaceId

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { asc, eq } from 'drizzle-orm';
 import { db, modulesTable } from '@/lib/db';
 import { badRequest, conflict, handler, notFound, parseBody, requireWriteAccess } from '@/lib/server/http';
+import { getSession } from '@/lib/server/session';
 import { ModuleUpdateInput } from '@/lib/server/validation';
 
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,15 @@ export const GET = handler(async () => {
 export const PATCH = handler(async (request: Request) => {
   const denied = await requireWriteAccess();
   if (denied) return denied;
+
+  // Kelola modul = privilege owner. Role pengguna/demo dilarang menyentuhnya.
+  const session = await getSession();
+  if (session?.role !== 'owner') {
+    return NextResponse.json(
+      { error: 'Hanya owner yang boleh mengubah modul' },
+      { status: 403 },
+    );
+  }
 
   const url = new URL(request.url);
   const key = url.searchParams.get('key');

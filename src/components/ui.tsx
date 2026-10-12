@@ -1,7 +1,7 @@
 'use client';
 
-import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, CircleAlert, Package, RefreshCw, X, type LucideIcon } from 'lucide-react';
+import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
+import { ChevronLeft, ChevronRight, CircleAlert, Eye, EyeOff, Package, RefreshCw, X, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/format';
 
@@ -285,6 +285,34 @@ export function Pagination({
         <ChevronRight size={15} />
       </button>
     </nav>
+  );
+}
+
+/**
+ * Input password dengan tombol ikon mata (tampilkan/sembunyikan) di kanan.
+ * Toggle-nya type="button" supaya tidak ikut submit form.
+ */
+export function PasswordInput({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <span className="password-wrap">
+      <input
+        {...props}
+        type={visible ? 'text' : 'password'}
+        className={cn('password-input', className)}
+      />
+      <button
+        type="button"
+        className="password-eye"
+        tabIndex={-1}
+        aria-label={visible ? 'Sembunyikan password' : 'Tampilkan password'}
+        aria-pressed={visible}
+        onClick={() => setVisible((prev) => !prev)}
+        data-testid="button-toggle-password"
+      >
+        {visible ? <EyeOff size={15} /> : <Eye size={15} />}
+      </button>
+    </span>
   );
 }
 

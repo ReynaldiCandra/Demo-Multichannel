@@ -2,7 +2,14 @@ import { jwtVerify } from 'jose';
 
 export const SESSION_COOKIE = 'dashboard_session';
 
-export type Role = 'owner' | 'demo';
+/**
+ * owner    — akses penuh termasuk Pengaturan & manajemen user
+ * pengguna — akses tulis penuh ke data bisnis, TIDAK bisa kelola modul/user
+ * demo     — hanya baca
+ *
+ * Token lama tanpa claim role jelas dianggap owner (behavior lama terjaga).
+ */
+export type Role = 'owner' | 'pengguna' | 'demo';
 
 export type SessionUser = {
   id: string;
@@ -32,7 +39,12 @@ export async function verifySessionToken(token: string): Promise<SessionUser | n
       id: payload.sub,
       email: String(payload.email ?? ''),
       name: String(payload.name ?? ''),
-      role: payload.role === 'demo' ? 'demo' : 'owner',
+      role:
+        payload.role === 'demo'
+          ? 'demo'
+          : payload.role === 'pengguna'
+            ? 'pengguna'
+            : 'owner',
       workspaceId:
         typeof payload.workspaceId === 'string' && payload.workspaceId
           ? payload.workspaceId

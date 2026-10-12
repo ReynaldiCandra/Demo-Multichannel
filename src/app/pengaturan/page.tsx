@@ -10,7 +10,7 @@ import {
   useSession,
   useUpdateModule,
 } from '@/lib/api/hooks';
-import { Badge, Button, Field, Panel, PageTitle, State } from '@/components/ui';
+import { Badge, Button, Field, Panel, PageTitle, PasswordInput, State } from '@/components/ui';
 
 export default function SettingsPage() {
   const modules = useListModules();
@@ -156,8 +156,7 @@ function AccountSecurity({ isDemo }: { isDemo: boolean }) {
       </div>
       <form className="account-form" onSubmit={submit}>
         <Field label="Password lama">
-          <input
-            type="password"
+          <PasswordInput
             required
             autoComplete="current-password"
             value={form.currentPassword}
@@ -165,8 +164,7 @@ function AccountSecurity({ isDemo }: { isDemo: boolean }) {
           />
         </Field>
         <Field label="Password baru">
-          <input
-            type="password"
+          <PasswordInput
             required
             minLength={8}
             autoComplete="new-password"
@@ -175,8 +173,7 @@ function AccountSecurity({ isDemo }: { isDemo: boolean }) {
           />
         </Field>
         <Field label="Ulangi password baru">
-          <input
-            type="password"
+          <PasswordInput
             required
             minLength={8}
             autoComplete="new-password"
@@ -207,9 +204,9 @@ function AccountSecurity({ isDemo }: { isDemo: boolean }) {
 function WorkspaceUsers() {
   const users = useListWorkspaceUsers();
   const create = useCreateWorkspaceUser({
-    onSuccess: () => setForm({ email: '', name: '', password: '', role: 'demo' }),
+    onSuccess: () => setForm({ email: '', name: '', password: '', role: 'pengguna' }),
   });
-  const [form, setForm] = useState({ email: '', name: '', password: '', role: 'demo' });
+  const [form, setForm] = useState({ email: '', name: '', password: '', role: 'pengguna' });
   const [error, setError] = useState<string | null>(null);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -235,7 +232,10 @@ function WorkspaceUsers() {
         </span>
         <div>
           <h2>Pengguna workspace</h2>
-          <p>Role demo hanya bisa melihat data — semua tombol simpan/hapus tetap ditolak server.</p>
+          <p>
+            Owner akses penuh · Pengguna kelola data tanpa Pengaturan · Demo hanya melihat — semua
+            dibatasi juga di server.
+          </p>
         </div>
       </div>
 
@@ -248,9 +248,25 @@ function WorkspaceUsers() {
           <ul className="workspace-user-list" data-testid="list-workspace-users">
             {users.data?.map((user) => (
               <li key={user.id}>
-                <span className="workspace-user-name">{user.name}</span>
-                <span className="workspace-user-email">{user.email}</span>
-                <Badge tone={user.role === 'owner' ? 'good' : 'neutral'}>{user.role}</Badge>
+                <span className="workspace-user-avatar" aria-hidden="true">
+                  {user.name
+                    .trim()
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map((part) => part[0]?.toUpperCase() ?? '')
+                    .join('')}
+                </span>
+                <span className="workspace-user-copy">
+                  <strong className="workspace-user-name">{user.name}</strong>
+                  <span className="workspace-user-email">{user.email}</span>
+                </span>
+                <Badge tone={user.role === 'owner' ? 'good' : 'neutral'}>
+                  {user.role === 'owner'
+                    ? 'Owner'
+                    : user.role === 'pengguna'
+                      ? 'Pengguna'
+                      : 'Demo'}
+                </Badge>
               </li>
             ))}
           </ul>
@@ -275,8 +291,7 @@ function WorkspaceUsers() {
               />
             </Field>
             <Field label="Password awal" hint="Minimal 8 karakter — minta user ganti sendiri nanti.">
-              <input
-                type="password"
+              <PasswordInput
                 required
                 minLength={8}
                 autoComplete="new-password"
@@ -289,8 +304,9 @@ function WorkspaceUsers() {
                 value={form.role}
                 onChange={(event) => setForm({ ...form, role: event.target.value })}
               >
-                <option value="demo">demo — hanya lihat</option>
-                <option value="owner">owner — akses penuh</option>
+                <option value="pengguna">Pengguna — kelola data, tanpa Pengaturan</option>
+                <option value="owner">Owner — akses penuh</option>
+                <option value="demo">Demo — hanya lihat</option>
               </select>
             </Field>
             <div className="account-actions">

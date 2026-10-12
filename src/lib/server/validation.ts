@@ -57,8 +57,8 @@ export const UserCreateInput = z.object({
     .string()
     .min(8, 'Password minimal 8 karakter')
     .max(72, 'Password maksimal 72 karakter (batas bcrypt)'),
-  /** owner = akses penuh; demo = hanya baca (server menolak semua aksi tulis). */
-  role: z.enum(['owner', 'demo']).default('owner'),
+  /** owner = akses penuh; pengguna = tulis data bisnis saja; demo = hanya baca. */
+  role: z.enum(['owner', 'pengguna', 'demo']).default('pengguna'),
 });
 
 export const StoreInput = z.object({
