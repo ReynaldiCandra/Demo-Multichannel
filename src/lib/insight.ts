@@ -11,6 +11,8 @@ import type { StorePerformanceReport } from '@/lib/api/types';
 
 export type ChannelGrowth = {
   channel: string;
+  /** Logo toko perwakilan kanal (null = fallback inisial). */
+  storeImage: string | null;
   revenue: number;
   previousRevenue: number;
   profit: number;
@@ -58,12 +60,14 @@ const growthOf = (revenue: number, previousRevenue: number): number | null =>
   previousRevenue > 0 ? ((revenue - previousRevenue) / previousRevenue) * 100 : null;
 
 function byChannel(report: StorePerformanceReport) {
-  const map = new Map<string, { revenue: number; profit: number }>();
+  const map = new Map<string, { revenue: number; profit: number; storeImage: string | null }>();
   for (const store of report.stores) {
     const key = store.channel.trim() || 'Lainnya';
-    const entry = map.get(key) ?? { revenue: 0, profit: 0 };
+    const entry = map.get(key) ?? { revenue: 0, profit: 0, storeImage: null };
     entry.revenue += store.revenue;
     entry.profit += store.profit;
+    // Logo perwakilan: toko pertama (urutan laporan = nama asc) yang punya foto.
+    if (!entry.storeImage && store.storeImage) entry.storeImage = store.storeImage;
     map.set(key, entry);
   }
   return map;
@@ -86,6 +90,7 @@ export function buildChannelInsight(
       const previousRevenue = before.get(channel)?.revenue ?? 0;
       return {
         channel,
+        storeImage: now.get(channel)?.storeImage ?? before.get(channel)?.storeImage ?? null,
         revenue,
         previousRevenue,
         profit: now.get(channel)?.profit ?? 0,
@@ -113,6 +118,7 @@ export function buildChannelInsight(
     const previousRevenue = rest.reduce((sum, row) => sum + row.previousRevenue, 0);
     channels.push({
       channel: 'Lainnya',
+      storeImage: null,
       revenue,
       previousRevenue,
       profit: rest.reduce((sum, row) => sum + row.profit, 0),

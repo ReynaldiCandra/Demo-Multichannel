@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ArrowDownRight, ArrowUpRight, ChevronRight, Clock, Minus, RefreshCw, TrendingUp } from 'lucide-react';
 import { useStorePerformance } from '@/lib/api/hooks';
-import { cn, monthLabel, monthNow, today } from '@/lib/format';
+import { channelBrandClass, cn, monthLabel, monthNow, today } from '@/lib/format';
 import {
   buildChannelInsight,
   formatGrowth,
@@ -105,6 +105,8 @@ export function RealtimeInsightBanner({ month }: { month: string }) {
 
   const insight = buildChannelInsight(current.data, previous.data);
   const updatedAt = current.dataUpdatedAt;
+  /** Produk terlaris periode ini (server sudah ranking): menembus kalimat insight. */
+  const topProduct = current.data.topProducts?.[0];
 
   let headline: string;
   let body: string;
@@ -117,7 +119,9 @@ export function RealtimeInsightBanner({ month }: { month: string }) {
   } else if (insight.leader) {
     headline = `Penjualan ${insight.leader.channel} tumbuh paling cepat.`;
     body = `Naik ${formatGrowth(insight.leader.growth ?? 0).replace('+', '')} dibanding ${compareLabel}.`;
-    if (insight.leader.profit > 0) body += ' Pertimbangkan menambah budget iklan untuk produk terlaris.';
+    if (topProduct) {
+      body = `Produk terlaris: ${topProduct.productName} (${topProduct.pcs} pcs). ${body}`;
+    }
   } else if (insight.weakest && (insight.weakest.growth ?? 0) < 0) {
     headline = 'Belum ada kanal yang tumbuh.';
     body = `Omzet ${insight.weakest.channel} turun ${formatGrowth(insight.weakest.growth ?? 0).replace('−', '')} dibanding ${compareLabel}.`;
@@ -151,9 +155,12 @@ export function RealtimeInsightBanner({ month }: { month: string }) {
 
           {leader && (
             <div className="rt-leader">
-              <span className={cn('marketplace-avatar', 'marketplace-avatar-0', 'rt-leader-badge')}>
-                {leader.channel.slice(0, 1).toUpperCase()}
-              </span>
+              <ChannelAvatar
+                channel={leader.channel}
+                image={leader.storeImage}
+                className="rt-leader-badge"
+                fallbackIndex={0}
+              />
               <strong className="rt-leader-growth">
                 {formatGrowth(leader.growth ?? 0)}
                 <ArrowUpRight size={12} />
@@ -186,7 +193,7 @@ export function RealtimeInsightBanner({ month }: { month: string }) {
           <>
             <div className="rt-tiles">
               {insight.channels.map((row, index) => (
-                <ChannelTile key={row.channel} row={row} index={index} />
+                <ChannelTile key={row.channel} row={row} index={index} month={month} />
               ))}
             </div>
             <div className="rt-foot">
@@ -202,14 +209,30 @@ export function RealtimeInsightBanner({ month }: { month: string }) {
   );
 }
 
-function ChannelTile({ row, index }: { row: ChannelGrowth; index: number }) {
+function ChannelTile({
+  row,
+  index,
+  month,
+}: {
+  row: ChannelGrowth;
+  index: number;
+  month: string;
+}) {
   const growth = row.growth;
   const tone = growth === null ? 'new' : growth > 0 ? 'up' : growth < 0 ? 'down' : 'flat';
   return (
-    <div className="rt-tile" data-testid={`tile-insight-${row.channel.toLowerCase().replaceAll(' ', '-')}`}>
-      <span className={`marketplace-avatar marketplace-avatar-${index % 4} rt-avatar`}>
-        {row.channel.slice(0, 1).toUpperCase()}
-      </span>
+    <Link
+      href={`/toko?month=${month}&channel=${encodeURIComponent(row.channel)}`}
+      className="rt-tile rt-tile-link"
+      title={`Buka penjualan toko kanal ${row.channel} untuk ${month}`}
+      data-testid={`tile-insight-${row.channel.toLowerCase().replaceAll(' ', '-')}`}
+    >
+      <ChannelAvatar
+        channel={row.channel}
+        image={row.storeImage}
+        className="rt-avatar"
+        fallbackIndex={index}
+      />
       <span className="rt-tile-copy">
         <span className="rt-tile-name" title={row.channel}>{row.channel}</span>
         <strong className={cn('rt-growth', `rt-${tone}`)}>
@@ -225,6 +248,39 @@ function ChannelTile({ row, index }: { row: ChannelGrowth; index: number }) {
           )}
         </strong>
       </span>
-    </div>
+    </Link>
   );
 }
+
+/**
+ * Avatar kanal: logo toko kalau ada; kalau tidak, placeholder warna khas
+ * marketplace (Shopee merah, TikTok hitam, Lazada biru, dst) dengan inisial.
+ */
+function ChannelAvatar({
+  channel,
+  image,
+  className,
+  fallbackIndex = 0,
+}: {
+  channel: string;
+  image: string | null;
+  className?: string;
+  fallbackIndex?: number;
+}) {
+  if (image) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={image}
+        alt=""
+        className={cn('marketplace-avatar', 'rt-avatar-img', className)}
+      />
+    );
+  }
+  return (
+    <span className={cn('marketplace-avatar', channelBrandClass(channel, fallbackIndex), className)}>
+      {channel.slice(0, 1).toUpperCase()}
+    </span>
+  );
+}
+

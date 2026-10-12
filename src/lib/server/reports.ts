@@ -90,6 +90,8 @@ export async function getStorePerformance(
       storeId: storesTable.id,
       storeName: storesTable.name,
       channel: storesTable.channel,
+      /** Logo toko — dipakai tile kanal & badge leader banner insight. */
+      storeImage: storesTable.imageUrl,
       isActive: storesTable.isActive,
       orders: sql<number>`coalesce(sum(${salesTable.qty}), 0)`,
       transactions: sql<number>`count(${salesTable.id})`,
@@ -112,7 +114,7 @@ export async function getStorePerformance(
     )
     // Tenant: hanya toko milik workspace ini.
     .where(workspaceId ? eq(storesTable.workspaceId, workspaceId) : undefined)
-    .groupBy(storesTable.id, storesTable.name, storesTable.channel, storesTable.isActive)
+    .groupBy(storesTable.id, storesTable.name, storesTable.channel, storesTable.isActive, storesTable.imageUrl)
     .orderBy(asc(storesTable.name), asc(storesTable.channel));
 
   const topProductRows = db
@@ -153,6 +155,7 @@ export async function getStorePerformance(
       storeId: row.storeId,
       storeName: row.storeName,
       channel: row.channel,
+      storeImage: row.storeImage ?? null,
       label: `${row.storeName} (${row.channel})`,
       orders: Number(row.orders) || 0,
       transactions: Number(row.transactions) || 0,

@@ -329,6 +329,8 @@ export type StorePerformanceRow = {
   storeId: string;
   storeName: string;
   channel: string;
+  /** Logo toko (null = pakai fallback inisial kanal di UI). */
+  storeImage: string | null;
   label: string;
   orders: number;
   transactions: number;

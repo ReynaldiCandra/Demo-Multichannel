@@ -8,10 +8,17 @@ import {
   relativeTimeLabel,
 } from '@/lib/insight';
 
-const row = (channel: string, revenue: number, profit = revenue / 2, id = channel): StorePerformanceRow => ({
+const row = (
+  channel: string,
+  revenue: number,
+  profit = revenue / 2,
+  id = channel,
+  storeImage: string | null = null,
+): StorePerformanceRow => ({
   storeId: id,
   storeName: 'Brand',
   channel,
+  storeImage,
   label: `Brand (${channel})`,
   orders: 1,
   transactions: 1,
