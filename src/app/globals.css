@@ -637,20 +637,16 @@ h2 { font: 700 16px/1.2 var(--app-font-serif); letter-spacing: -.02em; }
 
 /* ── Akun & pengguna (Pengaturan) ─────────────────────────────────────── */
 .panel.account-security, .panel.workspace-users { margin-bottom: 14px; padding: 20px 24px; }
-.section-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.section-head { display: flex; align-items: center; justify-content: flex-start; gap: 12px; margin-bottom: 18px; }
 .section-head h2 { font-size: 14px; margin: 0; line-height: 1.3; }
 .section-head p { color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.5; margin-top: 2px; }
 .settings-symbol-sm { width: 32px; height: 32px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; background: hsl(var(--secondary)); border: 1px solid hsl(var(--border)); flex: none; }
-/* Semua sel dalam satu baris grid direntangkan sama tinggi (stretch default);
-   kontrol di dorong ke bawah dengan margin-top:auto supaya kolom Role — yang
-   tidak punya hint — sejajar pawat dengan kolom ber-hint. Tidak jomplang. */
-.account-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
-.account-form .field { display: flex; flex-direction: column; }
-.account-form .field > input,
-.account-form .field > select,
-.account-form .field > .password-wrap { margin-top: auto; }
+/* Semua field dirata ATAS (label selalu di garis yang sama, kontrol selalu di
+   baris yang sama). Hinlington password menggantung di bawah input-nya sendiri
+   tanpa menggeser field tetangga — kolom Role sejajar dengan Password awal. */
+.account-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; align-items: start; }
+.account-form .field { display: flex; flex-direction: column; gap: 7px; }
 .account-form .field input, .account-form .field select { min-height: 39px; width: 100%; }
-.account-form .field .password-input { margin-top: auto; }
 .account-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; grid-column: 1 / -1; margin-top: 2px; }.account-error { color: hsl(0 72% 45%); font-size: 10.5px; font-weight: 600; }
 
 /* Input password + ikon mata */
