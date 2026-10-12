@@ -283,7 +283,14 @@ export type SalesReport = {
   totals: Metrics & { averageOrder: number; activeProducts: number };
   products: SalesReportProduct[];
   channels: Array<
-    Metrics & { storeId: string; storeName: string; channel: string; revenueShare: number }
+    Metrics & {
+      storeId: string;
+      storeName: string;
+      channel: string;
+      /** Logo toko (null = fallback logo marketplace/inisial). */
+      storeImage: string | null;
+      revenueShare: number;
+    }
   >;
   /** Batal dan retur: dicatat tapi TIDAK ikut omzet/profit. */
   excluded: {
@@ -463,6 +470,8 @@ export async function getSalesReport(filters: SalesReportFilters = {}): Promise<
         storeId: storesTable.id,
         storeName: storesTable.name,
         channel: storesTable.channel,
+        /** Logo toko untuk avatar kanal (page /toko). */
+        storeImage: storesTable.imageUrl,
         pcs,
         transactions,
         revenue,
@@ -474,7 +483,7 @@ export async function getSalesReport(filters: SalesReportFilters = {}): Promise<
       .innerJoin(productsTable, eq(salesTable.productId, productsTable.id))
       .innerJoin(storesTable, eq(productsTable.storeId, storesTable.id))
       .where(where)
-      .groupBy(storesTable.id, storesTable.name, storesTable.channel)
+      .groupBy(storesTable.id, storesTable.name, storesTable.channel, storesTable.imageUrl)
       .orderBy(desc(revenue)),
     db
       .select({ date: day, pcs, revenue, profit })
@@ -536,6 +545,7 @@ export async function getSalesReport(filters: SalesReportFilters = {}): Promise<
         storeId: row.storeId,
         storeName: row.storeName,
         channel: row.channel,
+        storeImage: row.storeImage ?? null,
         ...m,
         revenueShare: percent(m.revenue, totals.revenue),
       };

@@ -3,7 +3,7 @@
 import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, CircleAlert, Eye, EyeOff, Package, RefreshCw, X, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
-import { cn } from '@/lib/format';
+import { channelBrandLogo, cn } from '@/lib/format';
 
 export function Button({
   children,
@@ -292,6 +292,51 @@ export function Pagination({
  * Input password dengan tombol ikon mata (tampilkan/sembunyikan) di kanan.
  * Toggle-nya type="button" supaya tidak ikut submit form.
  */
+/**
+ * Avatar kanal, prioriteros: (1) logo toko hasil upload, (2) logo marketplace
+ * asli (SVG simple-icons di tile warna brand), (3) fallback inisial huruf.
+ * Dipakai banner insight, daftar marketplace dashboard, dan halaman toko.
+ */
+export function ChannelAvatar({
+  channel,
+  image,
+  className,
+}: {
+  channel: string;
+  image?: string | null;
+  className?: string;
+}) {
+  if (image) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={image}
+        alt=""
+        className={cn('marketplace-avatar', 'rt-avatar-img', className)}
+      />
+    );
+  }
+  const brand = channelBrandLogo(channel);
+  if (brand) {
+    return (
+      <span
+        className={cn('marketplace-avatar', className)}
+        style={{ background: `#${brand.hex}` }}
+        title={channel}
+      >
+        <svg viewBox="0 0 24 24" fill="hsl(0 0% 100%)" className="rt-brand-logo" aria-hidden="true">
+          <path d={brand.path} />
+        </svg>
+      </span>
+    );
+  }
+  return (
+    <span className={cn('marketplace-avatar', className)} title={channel}>
+      {channel.slice(0, 1).toUpperCase()}
+    </span>
+  );
+}
+
 export function PasswordInput({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   const [visible, setVisible] = useState(false);
   return (

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Award, Boxes, ChevronRight, CircleDollarSign, ShoppingBag, Wallet } from 'lucide-react';
 import { useGetDashboardSummary, useStorePerformance } from '@/lib/api/hooks';
 import type { DashboardTrendPoint, StorePerformanceReport } from '@/lib/api/types';
-import { Badge, KpiCard, Panel, PageTitle, Skeleton, State } from '@/components/ui';
+import { Badge, ChannelAvatar, KpiCard, Panel, PageTitle, Skeleton, State } from '@/components/ui';
 import { RealtimeInsightBanner } from '@/components/realtime-insight-banner';
 import { dateLabel, money, monthLabel, monthNow, monthValue, number } from '@/lib/format';
 
@@ -139,9 +139,7 @@ export default function DashboardPage() {
                       href={`/toko?month=${month}&brand=${encodeURIComponent(store.storeName)}&storeId=${store.storeId}`}
                       data-testid={`row-marketplace-${store.storeId}`}
                     >
-                      <span className={`marketplace-avatar marketplace-avatar-${index % 4}`}>
-                        {store.storeName.slice(0, 1).toUpperCase()}
-                      </span>
+                      <ChannelAvatar channel={store.channel} image={store.storeImage} />
                       <div className="marketplace-name">
                         <strong>{store.label}</strong>
                         <small>

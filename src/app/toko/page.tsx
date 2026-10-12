@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useSalesReport } from '@/lib/api/hooks';
 import type { SalesReport, SalesReportSort } from '@/lib/api/types';
-import { Badge, KpiCard, PageTitle, Panel, Pagination, Skeleton, State } from '@/components/ui';
+import { Badge, ChannelAvatar, KpiCard, PageTitle, Panel, Pagination, Skeleton, State } from '@/components/ui';
 import { cn, dateLabel, money, monthLabel, monthNow, number, today } from '@/lib/format';
 
 const SORTS: Array<{ key: SalesReportSort; label: string }> = [
@@ -289,9 +289,7 @@ function TokoAnalytics() {
                           setFilters({ brand: channel.storeName, storeId: channel.storeId })
                         }
                       >
-                        <span className={`marketplace-avatar marketplace-avatar-${index % 4}`}>
-                          {channel.storeName.slice(0, 1).toUpperCase()}
-                        </span>
+                        <ChannelAvatar channel={channel.channel} />
                         <div className="marketplace-name">
                           <strong>
                             {channel.storeName} ({channel.channel})
