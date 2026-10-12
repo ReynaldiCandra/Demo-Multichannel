@@ -685,6 +685,13 @@ h2 { font: 700 16px/1.2 var(--app-font-serif); letter-spacing: -.02em; }
 .pill-row-sub { margin-top: -6px; }
 .pill-label { color: hsl(var(--muted-foreground)); font: 500 9px var(--app-font-mono); letter-spacing: .06em; text-transform: uppercase; margin-right: 2px; }
 .pill { border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--foreground)); border-radius: 99px; padding: 8px 14px; font-size: 11px; font-weight: 700; cursor: pointer; transition: background .15s ease, color .15s ease; }
+
+/* Avatar kecil di dalam pill filter (kanaal & brand toko). */
+.pill-avatar { width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; margin-right: 7px; vertical-align: -4px; }
+.pill-avatar .marketplace-avatar, .marketplace-avatar.pill-avatar { width: 18px; height: 18px; border-radius: 50%; }
+.pill-avatar .rt-brand-logo { width: 10px; height: 10px; }
+.pill-avatar-toko { font: 700 8px var(--app-font-mono); color: hsl(var(--muted-foreground)); background: hsl(var(--secondary)); }
+.pill { display: inline-flex; align-items: center; }
 .pill:hover { background: hsl(var(--secondary)); }
 .pill.active { background: hsl(var(--primary)); border-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
 .pill-sm { padding: 5px 11px; font-size: 10px; }

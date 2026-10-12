@@ -406,7 +406,14 @@ export type SalesReport = {
   totals: SalesMetrics & { averageOrder: number; activeProducts: number };
   products: SalesReportProduct[];
   channels: Array<
-    SalesMetrics & { storeId: string; storeName: string; channel: string; revenueShare: number }
+    SalesMetrics & {
+      storeId: string;
+      storeName: string;
+      channel: string;
+      /** Logo toko (null = fallback logo marketplace/inisial). */
+      storeImage: string | null;
+      revenueShare: number;
+    }
   >;
   excluded: {
     batal: { transactions: number; pcs: number; revenue: number };

@@ -213,6 +213,9 @@ function TokoAnalytics() {
             onClick={() => setFilters({ brand: item.brand, storeId: null })}
             data-testid={`pill-brand-${item.brand}`}
           >
+            <span className="pill-avatar pill-avatar-toko" title={item.brand}>
+              {item.brand.slice(0, 1).toUpperCase()}
+            </span>
             {item.brand}
           </button>
         ))}
@@ -235,6 +238,7 @@ function TokoAnalytics() {
               className={cn('pill pill-sm', storeId === channel.storeId && 'active')}
               onClick={() => setFilters({ storeId: channel.storeId })}
             >
+              <ChannelAvatar channel={channel.channel} className="pill-avatar" />
               {channel.channel}
             </button>
           ))}
@@ -289,7 +293,7 @@ function TokoAnalytics() {
                           setFilters({ brand: channel.storeName, storeId: channel.storeId })
                         }
                       >
-                        <ChannelAvatar channel={channel.channel} />
+                        <ChannelAvatar channel={channel.channel} image={channel.storeImage} />
                         <div className="marketplace-name">
                           <strong>
                             {channel.storeName} ({channel.channel})
