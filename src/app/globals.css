@@ -1206,3 +1206,110 @@ td.bulk-col { padding-right: 0; }
   background: hsl(var(--muted) / 0.45);
   border-style: dashed;
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   PENGATURAN — MOBILE (≤640px): kartu jadi LIST satu kolom, semua
+   sejajar kiri (icon | teks | deskripsi), jarak & tombol disesuaikan
+   ════════════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  /* ── Kartu nav hub: 1 kolom vertikal, rata kiri ─────────────────── */
+  .settings-nav { grid-template-columns: 1fr; gap: 8px; }
+  .settings-nav-card { padding: 13px 14px; text-align: left; }
+  .settings-nav-card:active { transform: scale(0.985); }
+  .settings-nav-icon { width: 40px; height: 40px; }
+  .settings-nav-copy { gap: 2px; text-align: left; }
+  .settings-nav-copy strong { font-size: 13px; }
+  .settings-nav-copy span { font-size: 11px; }
+
+  /* ── Kartu identitas: stack ke bawah, rata kiri ─────────────────── */
+  .settings-intro { flex-direction: column; align-items: flex-start; gap: 12px; padding: 18px; }
+  .settings-intro-link { margin-top: 2px; }
+
+  /* ── Profil & keamanan: field satu kolom, tombol full-width ─────── */
+  .profile-form { gap: 14px; }
+  .profile-form-fields { grid-template-columns: 1fr; min-width: 0; }
+  .account-form { gap: 12px; }
+  .account-actions { flex-direction: column-reverse; align-items: stretch; gap: 8px; }
+  .account-actions .btn { width: 100%; justify-content: center; min-height: 40px; }
+  .account-error { text-align: right; }
+
+  /* ── Logo kanal: baris wrap, tombol upload/hapus berdampingan ───── */
+  .channel-logo-row { flex-wrap: wrap; row-gap: 8px; padding: 10px 12px; }
+  .channel-logo-name { flex: 1 1 auto; }
+  .channel-logo-upload { flex: 1 1 44%; justify-content: center; min-height: 34px; }
+  .channel-logo-delete { flex: 1 1 44%; justify-content: center; }
+
+  /* ── Daftar pengguna workspace: avatar + teks tetap satu baris ──── */
+  .workspace-user-list li { gap: 10px; padding: 10px 12px; }
+
+  /* ── Nada sentuh di mobile: tebarkan feedback aktif, bukan hover ── */
+  .module-toggle { padding: 7px 13px; }
+  .module-toggle:active:not(:disabled) { transform: scale(0.96); }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   PENGATURAN — DESKTOP: kerapian struktur Akun Saat Ini,
+   Profil & Keamanan, dan Logo Kanal (grid, kolom, tombol, ikon)
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Akun Saat Ini: teks fleksibel, link "Edit profil" jadi tombol
+      kecil yang selalu menempel di kanan — tidak mengekor teks ────── */
+.settings-intro > div { flex: 1; min-width: 0; }
+.settings-intro-link {
+  margin-left: auto;
+  white-space: nowrap;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: 9px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--secondary));
+  font-size: 11px;
+  color: hsl(var(--primary));
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.settings-intro-link:hover {
+  border-color: hsl(var(--primary) / 0.5);
+  background: hsl(var(--primary) / 0.08);
+}
+
+/* ── Judul seksi (Profil & Keamanan, Logo Kanal): tile ikon konsisten,
+      helo + deskripsi sepiring dan tak menabrak teks kanan ─────────── */
+.settings-symbol-sm {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--primary) / 0.12));
+  color: hsl(var(--primary));
+}
+.section-head h2 { letter-spacing: 0.01em; }
+.section-head p { margin-top: 3px; }
+.section-head > div { min-width: 0; }
+
+/* ── Form Profil: kolom nama & email lebar proporsional;
+      pesan error rapat kiri jadi tombol tetap di kanan bordir ─────── */
+.profile-form { align-items: center; }
+.account-error { margin-right: auto; }
+.account-actions { justify-content: flex-end; }
+.account-form .field small { font-size: 9.5px; margin-top: 2px; }
+
+/* ── Logo Kanal: satu struktur kolom di seluruh baris ───────────────
+      [avatar 34px] [nama lebar bebas] [badge baku] [aksi kanan]      */
+.channel-logo-row { padding: 10px 14px; align-items: center; }
+.channel-logo-preview { width: 34px; height: 34px; }
+.channel-logo-name { font-size: 12px; }
+.channel-logo-upload {
+  font-size: 10px;
+  padding: 6px 12px;
+  min-height: 32px;
+  border-radius: 8px;
+}
+.channel-logo-delete { font-size: 10px; border-radius: 8px; }
+
+/* ── Panel sub-halaman: jarak konsisten antar seksi & kepala panel ── */
+.panel.account-security, .panel.workspace-users { margin-top: 16px; }
+.profile-card + .account-security { margin-top: 16px; }
+
+/* Link "Edit profil" kembali rata kiri di mobile (aturan desktop
+   margin-left:auto tidak boleh bocor ke layar sempit). */
+@media (max-width: 640px) {
+  .settings-intro-link { margin-left: 0; align-self: flex-start; }
+}
