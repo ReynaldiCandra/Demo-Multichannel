@@ -100,14 +100,16 @@ const NAV_CARDS = [
   },
 ] as const;
 
+const OWNER_ONLY_CARDS = new Set(['/pengaturan/pengguna', '/pengaturan/modul']);
+
 export function SettingsNavCards() {
   const session = useSession();
   return (
     <div className="settings-nav">
       {NAV_CARDS.map((card) => {
         const Icon = card.icon;
-        const ownerOnly = card.href === '/pengaturan/pengguna';
-        const locked = ownerOnly && session.data?.role !== 'owner';
+        const locked =
+          OWNER_ONLY_CARDS.has(card.href) && session.data?.role !== 'owner';
         return (
           <Link
             key={card.href}
@@ -375,7 +377,14 @@ export function ChannelLogos({ isDemo }: { isDemo: boolean }) {
           }}
         />
       ) : channels.size === 0 ? (
-        <State type="empty" />
+        <div className="state">
+          <ImageUp size={24} />
+          <strong>Belum ada kanal</strong>
+          <span>
+            Kanal diambil dari daftar toko — tambahkan toko dengan kanal (Shopee, TikTok Shop,
+            dan lainnya) di menu Toko, lalu logo bisa diunggah di sini.
+          </span>
+        </div>
       ) : (
         <div className="channel-logo-list">
           {[...channels.entries()].map(([key, name]) => {
@@ -433,6 +442,16 @@ export function ModulesGrid() {
   const isDemo = session.data?.role === 'demo';
   const readOnly = session.isLoading || isDemo;
   const isOwner = session.data?.role === 'owner';
+
+  // Tunggu sesi selesai dulu — tanpa ini owner sempat melihat
+  // layar "Khusus owner" sesaat saat data sesi masih dimuat.
+  if (session.isLoading) {
+    return (
+      <Panel>
+        <State type="loading" />
+      </Panel>
+    );
+  }
 
   if (!isOwner) {
     return (
@@ -512,6 +531,14 @@ export function ModulesGrid() {
 
 export function WorkspaceUsersSection() {
   const session = useSession();
+
+  if (session.isLoading) {
+    return (
+      <Panel>
+        <State type="loading" />
+      </Panel>
+    );
+  }
 
   if (session.data?.role !== 'owner') {
     return (

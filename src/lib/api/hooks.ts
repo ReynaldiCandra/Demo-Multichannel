@@ -309,8 +309,8 @@ export function useBulkDeleteInvoices(
 ) {
   return useInvalidating(
     ({ ids }) =>
-      request<{ ok: boolean; deleted: string[] }>('/invoices/bulk-delete', {
-        method: 'POST',
+      request<{ ok: boolean; deleted: string[] }>('/invoices', {
+        method: 'DELETE',
         body: { ids },
       }),
     ['invoices'],
@@ -594,8 +594,8 @@ export function useBulkDeleteProducts(
 ) {
   return useInvalidating(
     ({ ids }) =>
-      request<{ ok: boolean; deleted: string[]; skipped: string[] }>('/products/bulk-delete', {
-        method: 'POST',
+      request<{ ok: boolean; deleted: string[]; skipped: string[] }>('/products', {
+        method: 'DELETE',
         body: { ids },
       }),
     ['products', 'stores', 'suppliers', 'sales-report', 'store-performance'],
@@ -610,8 +610,8 @@ export function useBulkUpdateProducts(
 ) {
   return useInvalidating(
     ({ ids, isActive }) =>
-      request<unknown>('/products/bulk-update', {
-        method: 'POST',
+      request<unknown>('/products', {
+        method: 'PATCH',
         body: { ids, isActive },
       }),
     ['products', 'sales-report', 'store-performance'],
@@ -801,8 +801,8 @@ export function useBulkDeleteSuppliers(
 ) {
   return useInvalidating(
     ({ ids }) =>
-      request<{ ok: boolean; deleted: string[]; skipped: string[] }>('/suppliers/bulk-delete', {
-        method: 'POST',
+      request<{ ok: boolean; deleted: string[]; skipped: string[] }>('/suppliers', {
+        method: 'DELETE',
         body: { ids },
       }),
     ['suppliers', 'products'],
@@ -817,8 +817,8 @@ export function useBulkUpdateSuppliers(
 ) {
   return useInvalidating(
     ({ ids, isActive }) =>
-      request<unknown>('/suppliers/bulk-update', {
-        method: 'POST',
+      request<unknown>('/suppliers', {
+        method: 'PATCH',
         body: { ids, isActive },
       }),
     ['suppliers', 'products'],
@@ -1028,8 +1028,8 @@ export function useBulkDeleteCrmLeads(
 ) {
   return useInvalidateCrm(
     ({ ids }) =>
-      request<{ ok: boolean; deleted: string[] }>('/crm/leads/bulk-delete', {
-        method: 'POST',
+      request<{ ok: boolean; deleted: string[] }>('/crm/leads', {
+        method: 'DELETE',
         body: { ids },
       }),
     options,
@@ -1043,8 +1043,8 @@ export function useBulkUpdateCrmLeads(
 ) {
   return useInvalidateCrm(
     ({ ids, category }) =>
-      request<unknown>('/crm/leads/bulk-update', {
-        method: 'POST',
+      request<unknown>('/crm/leads', {
+        method: 'PATCH',
         body: { ids, category },
       }),
     options,
@@ -1058,8 +1058,8 @@ export function useBulkDeleteCrmClients(
 ) {
   return useInvalidateCrm(
     ({ ids }) =>
-      request<{ ok: boolean; deleted: string[] }>('/crm/clients/bulk-delete', {
-        method: 'POST',
+      request<{ ok: boolean; deleted: string[] }>('/crm/clients', {
+        method: 'DELETE',
         body: { ids },
       }),
     options,
@@ -1073,8 +1073,8 @@ export function useBulkDeleteCrmProducts(
 ) {
   return useInvalidateCrm(
     ({ ids }) =>
-      request<{ ok: boolean; deleted: string[] }>('/crm/products/bulk-delete', {
-        method: 'POST',
+      request<{ ok: boolean; deleted: string[] }>('/crm/products', {
+        method: 'DELETE',
         body: { ids },
       }),
     options,

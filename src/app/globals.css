@@ -1085,3 +1085,124 @@ img.workspace-user-avatar { object-fit: cover; }
 .bulk-col { width: 34px; }
 td.bulk-col { padding-right: 0; }
 @media (max-width: 700px) { .bulk-bar { gap: 10px; padding: 9px 11px; width: calc(100vw - 30px); justify-content: space-between; }.bulk-bar-actions { gap: 6px; } }
+
+/* ════════════════════════════════════════════════════════════════════
+   PENGATURAN — lapisan poles premium (override halus; rule yang sama
+   lebih spesifik atau lebih bawah menang di atas style dasar di atas)
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Kartu identitas hub: garis aksen gradasi di tepi atas ───────── */
+.settings-intro {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 24px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.settings-intro::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.25));
+  border-radius: 999px;
+}
+.settings-intro:hover {
+  border-color: hsl(var(--primary) / 0.35);
+}
+
+/* ── Avatar identitas: cincin aksen halus ────────────────────────── */
+.settings-avatar {
+  box-shadow: 0 0 0 2px hsl(var(--card)), 0 0 0 3.5px hsl(var(--primary) / 0.35);
+}
+
+/* ── Kartu navigasi hub: angkat saat hover, tile icon gradasi ───── */
+.settings-nav-card {
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  box-shadow: 0 1px 2px hsl(231 28% 16% / 0.04);
+}
+.settings-nav-card:hover {
+  border-color: hsl(var(--primary) / 0.5);
+  box-shadow: 0 10px 24px hsl(231 28% 16% / 0.1);
+  transform: translateY(-2px);
+}
+.settings-nav-card:hover .settings-nav-chevron {
+  transform: translateX(3px);
+  color: hsl(var(--primary));
+}
+.settings-nav-chevron {
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+.settings-nav-icon {
+  background: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--primary) / 0.12));
+  color: hsl(var(--primary));
+  border: 1px solid hsl(var(--border));
+  transition: background 0.18s ease;
+}
+.settings-nav-card:hover .settings-nav-icon {
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.14), hsl(var(--primary) / 0.28));
+}
+
+/* ── Judul kartu nav: spasi antar ikon badge rapi ─────────────────── */
+.settings-nav-copy strong { letter-spacing: .01em; }
+
+/* ── Kartu modul: hover angkat halus + toggle gaya pill premium ──── */
+.module-card {
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  box-shadow: 0 1px 2px hsl(231 28% 16% / 0.04);
+}
+.module-card:hover {
+  border-color: hsl(var(--primary) / 0.45);
+  box-shadow: 0 10px 24px hsl(231 28% 16% / 0.09);
+  transform: translateY(-2px);
+}
+.module-toggle {
+  border-radius: 999px;
+  padding: 6px 12px;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.1s ease;
+}
+.module-toggle:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* ── Baris logo kanal: hover lembut ──────────────────────────────── */
+.channel-logo-row {
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.channel-logo-row:hover {
+  border-color: hsl(var(--primary) / 0.4);
+}
+
+/* ── Daftar pengguna workspace: baris hover + avatar aksen ───────── */
+.workspace-user-list li {
+  transition: background 0.15s ease;
+}
+.workspace-user-list li:hover {
+  background: hsl(var(--secondary) / 0.55);
+}
+
+/* ── Avatar profil: ring aksen ikut fokus/hover ──────────────────── */
+.profile-avatar {
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.profile-avatar:hover {
+  border-color: hsl(var(--primary) / 0.6);
+  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.12);
+}
+
+/* ── Panel form keamanan & catatan footer ────────────────────────── */
+.account-security,
+.workspace-users {
+  transition: border-color 0.18s ease;
+}
+.account-security:hover,
+.workspace-users:hover {
+  border-color: hsl(var(--border));
+}
+.settings-footer-note {
+  text-align: center;
+  padding: 12px 18px;
+  background: hsl(var(--muted) / 0.45);
+  border-style: dashed;
+}
