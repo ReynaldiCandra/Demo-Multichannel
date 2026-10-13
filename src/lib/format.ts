@@ -2,13 +2,13 @@ export function cn(...classes: Array<string | false | undefined | null>) {
   return classes.filter(Boolean).join(' ');
 }
 
-import { BRAND_LOGOS } from './brand-logos';
+import { BRAND_LOGOS, channelBrandClass } from './brand-logos';
 
 /**
  * Logo marketplace asli (SVG simple-icons) + warna brand dari nama kanal
- * bebas ("TikTok Shop", "shopee", dst). Kanal yang ikonnya dihapus dari
- * simple-icons karena permintaan trademark (Lazada, Tokopedia, Amazon) →
- * null, supaya pemanggil pakai fallback inisial berwarna brand.
+ * bebas ("TikTok Shop", "shopee", dst). Kanal yang tidak punya ikon
+ * simple-icons (Lazada, Tokopedia) → null, supaya pemanggil pakai fallback
+ * inisial berwarna brand (channelBrandClass).
  */
 export function channelBrandLogo(channel: string): { hex: string; path: string } | null {
   const key = channel.toLowerCase().trim();
@@ -19,6 +19,8 @@ export function channelBrandLogo(channel: string): { hex: string; path: string }
   }
   return null;
 }
+
+export { channelBrandClass };
 
 export const money = (value: number | string | null | undefined = 0) =>
   new Intl.NumberFormat('id-ID', {

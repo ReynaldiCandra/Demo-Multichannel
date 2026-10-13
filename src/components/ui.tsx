@@ -3,7 +3,7 @@
 import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, CircleAlert, Eye, EyeOff, Package, RefreshCw, X, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
-import { channelBrandLogo, cn } from '@/lib/format';
+import { channelBrandClass, channelBrandLogo, cn } from '@/lib/format';
 
 export function Button({
   children,
@@ -331,7 +331,10 @@ export function ChannelAvatar({
     );
   }
   return (
-    <span className={cn('marketplace-avatar', className)} title={channel}>
+    <span
+      className={cn('marketplace-avatar', channelBrandClass(channel), className)}
+      title={channel}
+    >
       {channel.slice(0, 1).toUpperCase()}
     </span>
   );
