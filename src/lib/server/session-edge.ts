@@ -16,6 +16,8 @@ export type SessionUser = {
   email: string;
   name: string;
   role: Role;
+  /** Foto profil (URL), dipakai avatar sidebar; token baru selalu membawanya. */
+  imageUrl?: string | null;
   /**
    * Tenant milik user (multi-tenant, fase 1). Opsional hanya supaya token
    * lama yang masih tersimpan di cookie tidak langsung invalid — token tanpa
@@ -45,6 +47,11 @@ export async function verifySessionToken(token: string): Promise<SessionUser | n
           : payload.role === 'pengguna'
             ? 'pengguna'
             : 'owner',
+      // Token lama tanpa klaim ini → undefined (avatar fallback ke inisial).
+      imageUrl:
+        typeof payload.image === 'string' && payload.image
+          ? payload.image
+          : null,
       workspaceId:
         typeof payload.workspaceId === 'string' && payload.workspaceId
           ? payload.workspaceId

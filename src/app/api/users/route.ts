@@ -31,6 +31,7 @@ export const GET = handler(async () => {
       role: usersTable.role,
       isActive: usersTable.isActive,
       createdAt: usersTable.createdAt,
+      imageUrl: usersTable.imageUrl,
     })
     .from(usersTable)
     .where(eq(usersTable.workspaceId, ctx.workspaceId))

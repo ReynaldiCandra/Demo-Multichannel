@@ -430,6 +430,8 @@ export const usersTable = pgTable('users', {
   name: text('name').notNull(),
   role: text('role').notNull().default('owner'),
   workspaceId: uuid('workspace_id').references(() => workspacesTable.id),
+  /** Foto profil user — tampil di sidebar & Pengaturan → Profil. */
+  imageUrl: text('image_url'),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

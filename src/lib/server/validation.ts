@@ -35,6 +35,20 @@ export const BulkActiveInput = BulkIdsInput.extend({
 /* Akun & pengguna (halaman Pengaturan)                                */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Profil sendiri (PATCH /api/auth/me): hanya nama & foto — email/role penuh
+ * tidak boleh diubah lewat endpoint ini.
+ */
+export const MeUpdateInput = z
+  .object({
+    name: z.string().trim().min(1, 'Nama wajib diisi').max(80),
+    /** Foto profil (URL hasil upload Vercel Blob kind=profile). */
+    imageUrl: z.string().url('URL foto tidak valid').nullable().optional(),
+  })
+  .refine((data) => Object.keys(data).some((key) => key === 'name' || key === 'imageUrl'), {
+    message: 'Tidak ada perubahan yang dikirim',
+  });
+
 /** Ganti password sendiri: wajib tahu password lama dulu. */
 export const ChangePasswordInput = z
   .object({

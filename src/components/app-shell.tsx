@@ -373,7 +373,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                 aria-expanded={accountOpen}
                 data-testid="button-account-menu"
               >
-                <span className="avatar">{initials(user?.name ?? '')}</span>
+                {user?.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img className="avatar" src={user.imageUrl} alt="" />
+                ) : (
+                  <span className="avatar">{initials(user?.name ?? '')}</span>
+                )}
                 <span className="account-copy">
                   <strong>{user?.name ?? '—'}</strong>
                   <small>{user?.role === 'demo' ? 'mode demo' : 'solo operator'}</small>

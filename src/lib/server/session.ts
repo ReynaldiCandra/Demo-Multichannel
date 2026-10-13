@@ -23,6 +23,8 @@ export async function createSessionToken(user: SessionUser) {
     email: user.email,
     name: user.name,
     role: user.role,
+    // Klaim foto profil — dipakai avatar sidebar antar halaman.
+    ...(user.imageUrl ? { image: user.imageUrl } : {}),
     // Claim tenant: dipakai fase 3 untuk scoping semua query per workspace.
     ...(user.workspaceId ? { workspaceId: user.workspaceId } : {}),
   })
@@ -47,6 +49,10 @@ export async function verifySessionToken(token: string): Promise<SessionUser | n
           : payload.role === 'pengguna'
             ? 'pengguna'
             : 'owner',
+      imageUrl:
+        typeof payload.image === 'string' && payload.image
+          ? payload.image
+          : null,
       workspaceId:
         typeof payload.workspaceId === 'string' && payload.workspaceId
           ? payload.workspaceId

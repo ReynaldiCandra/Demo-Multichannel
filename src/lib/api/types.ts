@@ -182,6 +182,8 @@ export type WorkspaceUserRow = {
   role: string;
   isActive: boolean;
   createdAt: string;
+  /** Foto profil user — opsional, dari kolom users.image_url. */
+  imageUrl?: string | null;
 };
 
 export type JobSummary = {

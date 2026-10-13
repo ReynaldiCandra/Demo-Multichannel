@@ -101,7 +101,7 @@ async function compressProductImage(file: File): Promise<Blob> {
 
 export async function uploadImage(
   file: File,
-  kind: 'product' | 'supplier' | 'sale' | 'invoice' | 'store' | 'host' | 'channel-logo',
+  kind: 'product' | 'supplier' | 'sale' | 'invoice' | 'store' | 'host' | 'channel-logo' | 'profile',
 ): Promise<{ url: string }> {
   const compressed = await compressProductImage(file);
   const formData = new FormData();
@@ -137,6 +137,11 @@ export async function uploadChannelLogo(file: File): Promise<{ url: string }> {
 /** Foto host live selling. */
 export async function uploadHostImage(file: File): Promise<{ url: string }> {
   return uploadImage(file, 'host');
+}
+
+/** Foto profil user (avatar sidebar & Pengaturan → Profil). */
+export async function uploadProfileImage(file: File): Promise<{ url: string }> {
+  return uploadImage(file, 'profile');
 }
 
 /* ------------------------------------------------------------------ */
@@ -1132,6 +1137,8 @@ export type SessionUser = {
   email: string;
   name: string;
   role: 'owner' | 'demo';
+  /** Foto profil (URL) — avatar sidebar; kosong = fallback inisial. */
+  imageUrl?: string | null;
   /** Tenant user (multi-tenant fase 1) — tampil di /api/auth/me. */
   workspaceId?: string;
 };
@@ -1152,4 +1159,16 @@ export function useSession() {
     },
     staleTime: 5 * 60 * 1000,
   });
+}
+
+/** Perbarui profil sendiri (nama & foto); sesi diterbitkan ulang oleh server. */
+export function useUpdateMyProfile(
+  options?: MutationOpts<unknown, { data: { name?: string; imageUrl?: string | null } }>,
+) {
+  return useInvalidating(
+    ({ data }) => request<{ user: unknown }>('/auth/me', { method: 'PATCH', body: data }),
+    ['session'],
+    options,
+    { kind: 'updated', message: 'Profil disimpan' },
+  );
 }

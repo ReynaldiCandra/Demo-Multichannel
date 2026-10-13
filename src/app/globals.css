@@ -425,6 +425,7 @@ body::after { width: 480px; height: 480px; bottom: -180px; left: -80px; backgrou
 .operator-copy { min-width: 0; }
 .operator strong { font-size: 11px; }
 .avatar { width: 29px; height: 29px; border-radius: 50%; display: grid; place-items: center; background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); font: 700 10px var(--app-font-mono); flex-shrink: 0; }
+img.avatar { object-fit: cover; }
 .avatar-teal { background: hsl(169 43% 47%); color: hsl(42 40% 99%); }
 .main-area { flex: 1; min-width: 0; }
 .sidebar-collapsed { width: 76px; padding-left: 12px; padding-right: 12px; }
@@ -689,6 +690,32 @@ h2 { font: 700 16px/1.2 var(--app-font-serif); letter-spacing: -.02em; }
 /* Avatar kecil di dalam pill filter (kanaal & brand toko). */
 .pill-avatar { width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; margin-right: 7px; vertical-align: -4px; }
 .pill-avatar .marketplace-avatar, .marketplace-avatar.pill-avatar { width: 18px; height: 18px; border-radius: 50%; }
+
+/* Pengaturan dipecah sub-halaman: hub, profil+foto, modul, pengguna, logo kanal. */
+.settings-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+.settings-nav-card { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--card)); transition: border-color 0.15s ease; }
+.settings-nav-card:hover { border-color: hsl(var(--accent)); }
+.settings-nav-icon { display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 auto; border-radius: 10px; background: hsl(var(--secondary)); color: hsl(var(--foreground)); }
+.settings-nav-copy { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.settings-nav-copy strong { font-size: 12px; display: flex; align-items: center; gap: 8px; }
+.settings-nav-copy span { color: hsl(var(--muted-foreground)); font-size: 10.5px; line-height: 1.45; }
+.settings-nav-chevron { flex: 0 0 auto; color: hsl(var(--muted-foreground)); }
+.settings-intro-link { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 800; color: hsl(var(--primary)); }
+.settings-avatar { display: grid; place-items: center; width: 54px; height: 54px; flex: 0 0 auto; border-radius: 50%; overflow: hidden; background: hsl(var(--secondary)); color: hsl(var(--muted-foreground)); }
+.settings-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.settings-footer-note { color: hsl(var(--muted-foreground)); font-size: 10.5px; }
+.settings-note-inline { margin: 0 0 12px; }
+
+/* Profil: avatar besar dengan tombol upload overlay. */
+.profile-form { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.profile-avatar { position: relative; display: grid; place-items: center; width: 74px; height: 74px; flex: 0 0 auto; border-radius: 50%; overflow: hidden; border: 1px solid hsl(var(--border)); background: hsl(var(--secondary)); color: hsl(var(--primary-foreground)); font-weight: 800; cursor: pointer; }
+.profile-avatar span:first-of-type { font-size: 20px; color: hsl(var(--foreground)); }
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-avatar input { position: absolute; inset: 0; opacity: 0; cursor: pointer; font-size: 0; }
+.profile-avatar-action { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center; gap: 4px; padding: 3px 0; background: hsl(var(--foreground) / 0.78); color: hsl(var(--background)); font-size: 8px; font-weight: 800; }
+.profile-form-fields { flex: 1; min-width: 240px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+img.workspace-user-avatar { object-fit: cover; }
 
 /* Logo kanal marketplace (Pengaturan → Logo kanal): upload/ganti/hapus. */
 .channel-logo-list { display: grid; gap: 8px; }
