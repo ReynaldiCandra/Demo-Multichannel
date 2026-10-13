@@ -1,16 +1,21 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { Check, LockKeyhole, Power, Settings2, UserPlus, KeyRound } from 'lucide-react';
+import { Check, ImageUp, LockKeyhole, Power, Settings2, Trash2, UserPlus, KeyRound } from 'lucide-react';
 import {
   useChangePassword,
   useCreateWorkspaceUser,
+  useDeleteChannelLogo,
+  useListChannelLogos,
   useListModules,
+  useListStores,
   useListWorkspaceUsers,
+  useSaveChannelLogo,
   useSession,
   useUpdateModule,
+  uploadChannelLogo,
 } from '@/lib/api/hooks';
-import { Badge, Button, Field, Panel, PageTitle, PasswordInput, State } from '@/components/ui';
+import { Badge, Button, ChannelAvatar, Field, Panel, PageTitle, PasswordInput, State } from '@/components/ui';
 
 export default function SettingsPage() {
   const modules = useListModules();
@@ -50,6 +55,10 @@ export default function SettingsPage() {
 
       <Panel className="account-security">
         <AccountSecurity isDemo={isDemo} />
+      </Panel>
+
+      <Panel className="channel-logos">
+        <ChannelLogos isDemo={isDemo} />
       </Panel>
 
       {isOwner && <WorkspaceUsers />}
@@ -113,6 +122,103 @@ export default function SettingsPage() {
         )}
       </div>
     </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Logo kanal marketplace (upload seperti logo toko)                   */
+/* ------------------------------------------------------------------ */
+
+function ChannelLogos({ isDemo }: { isDemo: boolean }) {
+  const stores = useListStores();
+  const logos = useListChannelLogos();
+  const save = useSaveChannelLogo();
+  const remove = useDeleteChannelLogo();
+  const [busyChannel, setBusyChannel] = useState<string | null>(null);
+
+  // Kanal unik dari data toko — satu baris UI per kanal, nama tampil apa
+  // adanya (pemakaian pertama).
+  const channels = new Map<string, string>();
+  for (const store of stores.data ?? []) {
+    const key = store.channel.toLowerCase().trim();
+    if (key && !channels.has(key)) channels.set(key, store.channel);
+  }
+
+  const handleFile = async (channel: string, file: File | null | undefined) => {
+    if (!file) return;
+    try {
+      setBusyChannel(channel.toLowerCase().trim());
+      const { url } = await uploadChannelLogo(file);
+      await save.mutateAsync({ channel, logoUrl: url });
+    } catch {
+      // Toast gagal sudah ditampilkan oleh onError hook — tidak perlu ganda.
+    } finally {
+      setBusyChannel(null);
+    }
+  };
+
+  return (
+    <section>
+      <div className="section-head">
+        <span className="settings-symbol settings-symbol-sm">
+          <ImageUp size={16} />
+        </span>
+        <div>
+          <h2>Logo kanal marketplace</h2>
+          <p>
+            Upload logo per kanal (Shopee, TikTok Shop, Lazada, dan lainnya) — otomatis tampil
+            di semua halaman: Penjualan, Analisa Toko, Produk & Stok, dan lainnya, persis seperti
+            logo toko.
+          </p>
+        </div>
+      </div>
+
+      {stores.isLoading || logos.isLoading ? (
+        <State type="loading" />
+      ) : stores.isError || logos.isError ? (
+        <State type="error" onRetry={() => { stores.refetch(); logos.refetch(); }} />
+      ) : channels.size === 0 ? (
+        <State type="empty" />
+      ) : (
+        <div className="channel-logo-list">
+          {[...channels.entries()].map(([key, name]) => {
+            const current = logos.data?.logos.find((logo) => logo.channelKey === key)?.logoUrl ?? null;
+            return (
+              <div className="channel-logo-row" key={key}>
+                <ChannelAvatar channel={name} className="channel-logo-preview" />
+                <span className="channel-logo-name">{name}</span>
+                <Badge tone={current ? 'good' : 'neutral'}>{current ? 'Logo aktif' : 'Pakai SVG/inisial'}</Badge>
+                <label className="channel-logo-upload" title={`Ganti logo ${name}`}>
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg, image/webp"
+                    disabled={isDemo || busyChannel === key}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = '';
+                      void handleFile(name, file);
+                    }}
+                  />
+                  {current ? 'Ganti' : 'Upload'}
+                </label>
+                {current && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="channel-logo-delete"
+                    disabled={isDemo || remove.isPending}
+                    aria-label={`Hapus logo kanal ${name}`}
+                    onClick={() => remove.mutate({ channel: name })}
+                  >
+                    <Trash2 size={13} /> Hapus
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }
 

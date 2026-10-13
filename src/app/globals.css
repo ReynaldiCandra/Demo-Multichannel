@@ -689,6 +689,23 @@ h2 { font: 700 16px/1.2 var(--app-font-serif); letter-spacing: -.02em; }
 /* Avatar kecil di dalam pill filter (kanaal & brand toko). */
 .pill-avatar { width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; margin-right: 7px; vertical-align: -4px; }
 .pill-avatar .marketplace-avatar, .marketplace-avatar.pill-avatar { width: 18px; height: 18px; border-radius: 50%; }
+
+/* Logo kanal marketplace (Pengaturan → Logo kanal): upload/ganti/hapus. */
+.channel-logo-list { display: grid; gap: 8px; }
+.channel-logo-row { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--card)); }
+.channel-logo-preview { width: 32px; height: 32px; flex: 0 0 auto; }
+.channel-logo-name { flex: 1; min-width: 0; font-size: 11.5px; font-weight: 800; }
+.channel-logo-upload { position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 5px; border: 1px solid hsl(var(--border)); border-radius: 6px; padding: 5px 9px; background: hsl(var(--secondary)); color: hsl(var(--foreground)); cursor: pointer; font-size: 9px; font-weight: 800; transition: border-color 0.15s ease; }
+.channel-logo-upload:hover { border-color: hsl(var(--accent)); }
+.channel-logo-upload:has(input:disabled) { cursor: not-allowed; opacity: 0.5; }
+.channel-logo-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; font-size: 0; }
+.channel-logo-upload:has(input:disabled) input { cursor: not-allowed; }
+.channel-logo-delete { min-height: 28px; padding: 0 9px; font-size: 9px; font-weight: 800; }
+
+/* Sel toko berlogo di tabel Laporan; kanal kecil di detail penjualan POS. */
+.store-cell { display: flex; align-items: center; gap: 8px; }
+.store-cell .marketplace-avatar { flex: 0 0 auto; }
+.sale-detail-channel { display: flex; align-items: center; gap: 6px; }
 .pill-avatar .rt-brand-logo { width: 10px; height: 10px; }
 .pill-avatar-toko { font: 700 8px var(--app-font-mono); color: hsl(var(--muted-foreground)); background: hsl(var(--secondary)); }
 .pill { display: inline-flex; align-items: center; }

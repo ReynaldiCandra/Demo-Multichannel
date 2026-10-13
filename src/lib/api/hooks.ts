@@ -34,6 +34,7 @@ import type {
   CrmLeadsResponse,
   CrmProductRow,
   WorkspaceUserRow,
+  ChannelLogosResponse,
 } from './types';
 
 /* ------------------------------------------------------------------ */
@@ -100,7 +101,7 @@ async function compressProductImage(file: File): Promise<Blob> {
 
 export async function uploadImage(
   file: File,
-  kind: 'product' | 'supplier' | 'sale' | 'invoice' | 'store' | 'host',
+  kind: 'product' | 'supplier' | 'sale' | 'invoice' | 'store' | 'host' | 'channel-logo',
 ): Promise<{ url: string }> {
   const compressed = await compressProductImage(file);
   const formData = new FormData();
@@ -126,6 +127,11 @@ export async function uploadProductImage(file: File): Promise<{ url: string }> {
 /** Logo/foto brand toko & kanal. */
 export async function uploadStoreImage(file: File): Promise<{ url: string }> {
   return uploadImage(file, 'store');
+}
+
+/** Logo marketplace per kanal — simpel: tanpa kompresi besar/recompress agresif. */
+export async function uploadChannelLogo(file: File): Promise<{ url: string }> {
+  return uploadImage(file, 'channel-logo');
 }
 
 /** Foto host live selling. */
@@ -159,6 +165,7 @@ export const getSalesReportQueryKey = (params?: SalesReportParams) =>
   ['sales-report', params ?? {}] as const;
 export const getStorePerformanceQueryKey = (params?: { month?: string; until?: string }) =>
   ['store-performance', params ?? {}] as const;
+export const getListChannelLogosQueryKey = () => ['channel-logos'] as const;
 
 /* ------------------------------------------------------------------ */
 /* queries                                                             */
@@ -179,6 +186,43 @@ export function useListStores() {
     queryKey: getListStoresQueryKey(),
     queryFn: ({ signal }) => request<StoreRow[]>('/stores', { signal }),
   });
+}
+
+/** Peta logo kanal hasil upload — dipakai ChannelAvatar di semua halaman. */
+export function useListChannelLogos() {
+  return useQuery({
+    queryKey: getListChannelLogosQueryKey(),
+    queryFn: ({ signal }) =>
+      request<ChannelLogosResponse>('/channel-logos', { signal }),
+    // Logo jarang berubah; satu fetch di-share seluruh aplikasi.
+    staleTime: 60_000,
+  });
+}
+
+/** Upsert logo satu kanal (Pengaturan → Logo kanal). */
+export function useSaveChannelLogo(
+  options?: MutationOpts<unknown, { channel: string; logoUrl: string }>,
+) {
+  return useInvalidating(
+    ({ channel, logoUrl }) =>
+      request<unknown>('/channel-logos', { method: 'POST', body: { channel, logoUrl } }),
+    ['channel-logos'],
+    options,
+    { kind: 'created', message: 'Logo kanal disimpan' },
+  );
+}
+
+/** Hapus logo kanal — kembali ke SVG simple-icons / inisial fallback. */
+export function useDeleteChannelLogo(
+  options?: MutationOpts<unknown, { channel: string }>,
+) {
+  return useInvalidating(
+    ({ channel }) =>
+      request<unknown>('/channel-logos', { method: 'DELETE', body: { channel } }),
+    ['channel-logos'],
+    options,
+    { kind: 'deleted', message: 'Logo kanal dihapus' },
+  );
 }
 
 export const getListSettlementsQueryKey = (month: string) => ['settlements', month] as const;

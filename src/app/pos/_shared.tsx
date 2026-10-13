@@ -15,6 +15,7 @@ import { autoPlatformFee } from '@/lib/fees';
 import {
   Badge,
   Button,
+  ChannelAvatar,
   ConfirmDialog,
   Field,
   ImagePreviewButton,
@@ -327,7 +328,8 @@ export function SaleDetailPanel({ sale, onClose }: { sale: SaleRow; onClose: () 
                 <ImagePreviewButton src={product.imageUrl} alt={`Foto produk ${product.name}`} />
                 <div>
                   <strong>{product.name}</strong>
-                  <small>
+                  <small className="sale-detail-channel">
+                    <ChannelAvatar channel={product.channel} className="pill-avatar" />
                     {product.storeName} ({product.channel})
                   </small>
                   <small>

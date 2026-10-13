@@ -57,6 +57,34 @@ export const suppliersTable = pgTable('suppliers', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index('suppliers_workspace_id_idx').on(table.workspaceId)]);
 
+/**
+ * Logo kanal hasil upload (sama seperti logo toko, tapi per NAMA KANAL).
+ * Satu workspace boleh punya satu logo per kanal; `channelKey` adalah versi
+ * lowercase-trim dari `channel` supaya "TikTok Shop" vs "tiktok shop" cocok
+ * ke baris yang sama. ChannelAvatar memrioritaskan logo ini di atas SVG.
+ */
+export const channelLogosTable = pgTable(
+  'channel_logos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id').references(() => workspacesTable.id),
+    /** Nama kanal apa adanya — dipakai untuk tampilan di Pengaturan. */
+    channel: text('channel').notNull(),
+    /** Versi lowercase-trim untuk unik & pencocokan case-insensitive. */
+    channelKey: text('channel_key').notNull(),
+    /** URL logo di Vercel Blob (hasil /api/uploads/image kind=channel-logo). */
+    logoUrl: text('logo_url').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('channel_logos_workspace_channel_unique').on(table.workspaceId, table.channelKey),
+    index('channel_logos_workspace_id_idx').on(table.workspaceId),
+  ],
+);
+
+export type ChannelLogo = typeof channelLogosTable.$inferSelect;
+
 export const productsTable = pgTable('products', {
   id: uuid('id').primaryKey().defaultRandom(),
   storeId: uuid('store_id')

@@ -3,6 +3,7 @@
 import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, CircleAlert, Eye, EyeOff, Package, RefreshCw, X, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
+import { useListChannelLogos } from '@/lib/api/hooks';
 import { channelBrandClass, channelBrandLogo, cn } from '@/lib/format';
 
 export function Button({
@@ -293,9 +294,10 @@ export function Pagination({
  * Toggle-nya type="button" supaya tidak ikut submit form.
  */
 /**
- * Avatar kanal, prioriteros: (1) logo toko hasil upload, (2) logo marketplace
- * asli (SVG simple-icons di tile warna brand), (3) fallback inisial huruf.
- * Dipakai banner insight, daftar marketplace dashboard, dan halaman toko.
+ * Avatar kanal, diprioritorkan: (1) logo kanal hasil upload di Pengaturan
+ * (dipakai SEMUA halaman otomatis — satu fetch dibagi via react-query),
+ * (2) logo/foto toko terkait, (3) logo marketplace asli (SVG simple-icons
+ * di tile warna brand), (4) fallback inisial huruf berwarna brand.
  */
 export function ChannelAvatar({
   channel,
@@ -306,12 +308,19 @@ export function ChannelAvatar({
   image?: string | null;
   className?: string;
 }) {
-  if (image) {
+  // Logo custom per kanal; error/401 hanya berarti kembali ke fallback di bawah.
+  const logos = useListChannelLogos();
+  const channelKey = channel.toLowerCase().trim();
+  const customLogo = logos.data?.logos.find((logo) => logo.channelKey === channelKey)?.logoUrl;
+  const src = customLogo ?? image ?? null;
+
+  if (src) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={image}
+        src={src}
         alt=""
+        title={channel}
         className={cn('marketplace-avatar', 'rt-avatar-img', className)}
       />
     );

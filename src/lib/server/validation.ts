@@ -230,6 +230,20 @@ export const ModuleUpdateInput = z.object({
   isEnabled: z.boolean(),
 });
 
+/**
+ * Logo kanal marketplace hasil upload (Pengaturan → Logo kanal).
+ * Nama kanal bebas — disimpan + dicocokkan case-insensitive via channel_key.
+ */
+export const ChannelLogoInput = z.object({
+  channel: z.string().trim().min(1, 'Nama kanal wajib diisi').max(60, 'Nama kanal maksimal 60 karakter'),
+  /** URL logo di Vercel Blob (hasil /api/uploads/image kind=channel-logo). */
+  logoUrl: z.string().url('URL logo tidak valid'),
+});
+
+export const ChannelLogoDeleteInput = z.object({
+  channel: z.string().trim().min(1, 'Nama kanal wajib diisi').max(60),
+});
+
 export const TASK_STATUSES = ['todo', 'doing', 'done'] as const;
 export const TASK_PRIORITIES = ['low', 'normal', 'high'] as const;
 

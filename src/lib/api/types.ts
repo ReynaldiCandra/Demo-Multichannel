@@ -11,6 +11,18 @@ export type StoreRow = {
   transactionCount: number;
 };
 
+/** Logo kanal hasil upload (Pengaturan → Logo kanal), keyed per kanal. */
+export type ChannelLogoRow = {
+  channel: string;
+  channelKey: string;
+  logoUrl: string;
+};
+
+/** Response GET /api/channel-logos. */
+export type ChannelLogosResponse = {
+  logos: ChannelLogoRow[];
+};
+
 export type ProductRow = {
   id: string;
   storeId: string;
