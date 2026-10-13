@@ -1087,229 +1087,340 @@ td.bulk-col { padding-right: 0; }
 @media (max-width: 700px) { .bulk-bar { gap: 10px; padding: 9px 11px; width: calc(100vw - 30px); justify-content: space-between; }.bulk-bar-actions { gap: 6px; } }
 
 /* ════════════════════════════════════════════════════════════════════
-   PENGATURAN — lapisan poles premium (override halus; rule yang sama
-   lebih spesifik atau lebih bawah menang di atas style dasar di atas)
+   HALAMAN PENGATURAN — REBUILD PREMIUM (satu sumber kebenaran)
+   Blok ini sepenuhnya menggantikan lapisan lama yang tersebar di atas
+   (aturan sama-spesifisitas lebih bawah menang). Struktur masih
+   klasenya: .settings-intro / .settings-nav / .section-head / dll.
    ════════════════════════════════════════════════════════════════════ */
 
-/* ── Kartu identitas hub: garis aksen gradasi di tepi atas ───────── */
+/* ────────────────────────────────────────────────────────────────────
+   1. KARTU DASAR (dipakai semua seksi pengaturan)
+   ──────────────────────────────────────────────────────────────────── */
+.settings-shell {
+  --settings-radius: 14px;
+  --settings-shadow: 0 1px 3px hsl(231 28% 16% / 0.06), 0 1px 2px hsl(231 28% 16% / 0.04);
+  --settings-shadow-hover: 0 12px 28px hsl(231 28% 16% / 0.12), 0 3px 8px hsl(231 28% 16% / 0.06);
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   2. KARTU "AKUN SAAT INI" (hub)
+   ──────────────────────────────────────────────────────────────────── */
 .settings-intro {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+  margin-bottom: 16px;
+  border-radius: var(--settings-radius, 14px);
+  box-shadow: var(--settings-shadow);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
   position: relative;
   overflow: hidden;
-  padding: 22px 24px;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.settings-intro:hover {
+  border-color: hsl(var(--primary) / 0.4);
+  box-shadow: var(--settings-shadow-hover);
 }
 .settings-intro::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 0; left: 0; right: 0;
   height: 3px;
-  background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.25));
-  border-radius: 999px;
+  background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.2));
 }
-.settings-intro:hover {
-  border-color: hsl(var(--primary) / 0.35);
+.settings-intro .eyebrow { font-size: 9px; }
+.settings-intro h2 { margin: 3px 0 0; font-size: 16px; line-height: 1.3; }
+.settings-intro > div p {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: hsl(var(--muted-foreground));
 }
-
-/* ── Avatar identitas: cincin aksen halus ────────────────────────── */
-.settings-avatar {
-  box-shadow: 0 0 0 2px hsl(var(--card)), 0 0 0 3.5px hsl(var(--primary) / 0.35);
-}
-
-/* ── Kartu navigasi hub: angkat saat hover, tile icon gradasi ───── */
-.settings-nav-card {
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
-  box-shadow: 0 1px 2px hsl(231 28% 16% / 0.04);
-}
-.settings-nav-card:hover {
-  border-color: hsl(var(--primary) / 0.5);
-  box-shadow: 0 10px 24px hsl(231 28% 16% / 0.1);
-  transform: translateY(-2px);
-}
-.settings-nav-card:hover .settings-nav-chevron {
-  transform: translateX(3px);
-  color: hsl(var(--primary));
-}
-.settings-nav-chevron {
-  transition: transform 0.18s ease, color 0.18s ease;
-}
-.settings-nav-icon {
-  background: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--primary) / 0.12));
-  color: hsl(var(--primary));
-  border: 1px solid hsl(var(--border));
-  transition: background 0.18s ease;
-}
-.settings-nav-card:hover .settings-nav-icon {
-  background: linear-gradient(135deg, hsl(var(--primary) / 0.14), hsl(var(--primary) / 0.28));
-}
-
-/* ── Judul kartu nav: spasi antar ikon badge rapi ─────────────────── */
-.settings-nav-copy strong { letter-spacing: .01em; }
-
-/* ── Kartu modul: hover angkat halus + toggle gaya pill premium ──── */
-.module-card {
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
-  box-shadow: 0 1px 2px hsl(231 28% 16% / 0.04);
-}
-.module-card:hover {
-  border-color: hsl(var(--primary) / 0.45);
-  box-shadow: 0 10px 24px hsl(231 28% 16% / 0.09);
-  transform: translateY(-2px);
-}
-.module-toggle {
-  border-radius: 999px;
-  padding: 6px 12px;
-  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.1s ease;
-}
-.module-toggle:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-/* ── Baris logo kanal: hover lembut ──────────────────────────────── */
-.channel-logo-row {
-  transition: border-color 0.18s ease, background 0.18s ease;
-}
-.channel-logo-row:hover {
-  border-color: hsl(var(--primary) / 0.4);
-}
-
-/* ── Daftar pengguna workspace: baris hover + avatar aksen ───────── */
-.workspace-user-list li {
-  transition: background 0.15s ease;
-}
-.workspace-user-list li:hover {
-  background: hsl(var(--secondary) / 0.55);
-}
-
-/* ── Avatar profil: ring aksen ikut fokus/hover ──────────────────── */
-.profile-avatar {
-  transition: box-shadow 0.18s ease, border-color 0.18s ease;
-}
-.profile-avatar:hover {
-  border-color: hsl(var(--primary) / 0.6);
-  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.12);
-}
-
-/* ── Panel form keamanan & catatan footer ────────────────────────── */
-.account-security,
-.workspace-users {
-  transition: border-color 0.18s ease;
-}
-.account-security:hover,
-.workspace-users:hover {
-  border-color: hsl(var(--border));
-}
-.settings-footer-note {
-  text-align: center;
-  padding: 12px 18px;
-  background: hsl(var(--muted) / 0.45);
-  border-style: dashed;
-}
-
-/* ════════════════════════════════════════════════════════════════════
-   PENGATURAN — MOBILE (≤640px): kartu jadi LIST satu kolom, semua
-   sejajar kiri (icon | teks | deskripsi), jarak & tombol disesuaikan
-   ════════════════════════════════════════════════════════════════════ */
-@media (max-width: 640px) {
-  /* ── Kartu nav hub: 1 kolom vertikal, rata kiri ─────────────────── */
-  .settings-nav { grid-template-columns: 1fr; gap: 8px; }
-  .settings-nav-card { padding: 13px 14px; text-align: left; }
-  .settings-nav-card:active { transform: scale(0.985); }
-  .settings-nav-icon { width: 40px; height: 40px; }
-  .settings-nav-copy { gap: 2px; text-align: left; }
-  .settings-nav-copy strong { font-size: 13px; }
-  .settings-nav-copy span { font-size: 11px; }
-
-  /* ── Kartu identitas: stack ke bawah, rata kiri ─────────────────── */
-  .settings-intro { flex-direction: column; align-items: flex-start; gap: 12px; padding: 18px; }
-  .settings-intro-link { margin-top: 2px; }
-
-  /* ── Profil & keamanan: field satu kolom, tombol full-width ─────── */
-  .profile-form { gap: 14px; }
-  .profile-form-fields { grid-template-columns: 1fr; min-width: 0; }
-  .account-form { gap: 12px; }
-  .account-actions { flex-direction: column-reverse; align-items: stretch; gap: 8px; }
-  .account-actions .btn { width: 100%; justify-content: center; min-height: 40px; }
-  .account-error { text-align: right; }
-
-  /* ── Logo kanal: baris wrap, tombol upload/hapus berdampingan ───── */
-  .channel-logo-row { flex-wrap: wrap; row-gap: 8px; padding: 10px 12px; }
-  .channel-logo-name { flex: 1 1 auto; }
-  .channel-logo-upload { flex: 1 1 44%; justify-content: center; min-height: 34px; }
-  .channel-logo-delete { flex: 1 1 44%; justify-content: center; }
-
-  /* ── Daftar pengguna workspace: avatar + teks tetap satu baris ──── */
-  .workspace-user-list li { gap: 10px; padding: 10px 12px; }
-
-  /* ── Nada sentuh di mobile: tebarkan feedback aktif, bukan hover ── */
-  .module-toggle { padding: 7px 13px; }
-  .module-toggle:active:not(:disabled) { transform: scale(0.96); }
-}
-
-/* ════════════════════════════════════════════════════════════════════
-   PENGATURAN — DESKTOP: kerapian struktur Akun Saat Ini,
-   Profil & Keamanan, dan Logo Kanal (grid, kolom, tombol, ikon)
-   ════════════════════════════════════════════════════════════════════ */
-
-/* ── Akun Saat Ini: teks fleksibel, link "Edit profil" jadi tombol
-      kecil yang selalu menempel di kanan — tidak mengekor teks ────── */
-.settings-intro > div { flex: 1; min-width: 0; }
+.settings-intro > div { flex: 1; min-width: 0; }   /* teks lebar fleksibel */
 .settings-intro-link {
   margin-left: auto;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
   gap: 5px;
   padding: 7px 13px;
   border-radius: 9px;
   border: 1px solid hsl(var(--border));
   background: hsl(var(--secondary));
   font-size: 11px;
+  font-weight: 700;
   color: hsl(var(--primary));
+  text-decoration: none;
   transition: border-color 0.18s ease, background 0.18s ease;
 }
 .settings-intro-link:hover {
   border-color: hsl(var(--primary) / 0.5);
   background: hsl(var(--primary) / 0.08);
 }
+/* Avatar kartu identitas — KEcil & proporsional (keluhan: terlalu besar) */
+.settings-avatar {
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 50%;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--secondary));
+  box-shadow: 0 0 0 2px hsl(var(--card)), 0 0 0 3.5px hsl(var(--primary) / 0.28);
+  flex: none;
+}
+.settings-avatar svg { width: 16px; height: 16px; }  /* ikon fallback diperkecil */
 
-/* ── Judul seksi (Profil & Keamanan, Logo Kanal): tile ikon konsisten,
-      helo + deskripsi sepiring dan tak menabrak teks kanan ─────────── */
+/* ────────────────────────────────────────────────────────────────────
+   3. KEPALA SEKSI (Profil & Keamanan, Logo Kanal)
+   Ikon gembok/kanal: tile 30px dengan margin aman dari pembatas
+   ──────────────────────────────────────────────────────────────────── */
+.settings-shell .section-head,
+.section-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.section-head > div { min-width: 0; }
+.section-head h2 { margin: 0; font-size: 14px; line-height: 1.35; letter-spacing: 0.01em; }
+.section-head p { margin: 3px 0 0; font-size: 11px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
 .settings-symbol-sm {
-  width: 36px;
-  height: 36px;
+  width: 34px !important;
+  height: 34px !important;
+  padding: 0;
+  margin: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: 10px;
+  border: 1px solid hsl(var(--border));
+  background: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--primary) / 0.12)) !important;
+  color: hsl(var(--primary)) !important;
+}
+.settings-symbol-sm svg { width: 15px; height: 15px; }  /* ikon diperkecil */
+
+/* ────────────────────────────────────────────────────────────────────
+   4. FORM PROFIL — avatar + kolom Nama/Email SEJAJAR rapi
+   ──────────────────────────────────────────────────────────────────── */
+.profile-form { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.profile-avatar {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  flex: none;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--secondary));
+  box-shadow: var(--settings-shadow);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.profile-avatar:hover {
+  border-color: hsl(var(--primary) / 0.55);
+  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.12);
+}
+.profile-form-fields {
+  flex: 1;
+  min-width: 260px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));  /* Nama & Email eksak 2 kolom sama */
+  gap: 12px 16px;
+  align-items: end;                                   /* dasar field sejajar */
+}
+.account-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 16px; align-items: end; }
+.account-form .field { display: flex; flex-direction: column; gap: 6px; }
+.account-form .field span { font-size: 10.5px; font-weight: 700; }
+.account-form .field small { font-size: 9.5px; color: hsl(var(--muted-foreground)); margin-top: 1px; }
+.account-form .field input, .account-form .field select { min-height: 40px; width: 100%; }
+.account-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+.account-error { margin-right: auto; color: hsl(0 72% 45%); font-size: 10.5px; font-weight: 600; }
+
+/* ────────────────────────────────────────────────────────────────────
+   5. LOGO KANAL — grid baku: [avatar][nama][badge][aksi]
+   ──────────────────────────────────────────────────────────────────── */
+.channel-logo-list { display: grid; gap: 8px; }
+.channel-logo-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  background: hsl(var(--card));
+  box-shadow: var(--settings-shadow);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.channel-logo-row:hover {
+  border-color: hsl(var(--primary) / 0.45);
+  box-shadow: var(--settings-shadow-hover);
+}
+.channel-logo-preview { width: 34px; height: 34px; }
+.channel-logo-name {
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.channel-logo-upload {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 6px 14px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 9px;
+  background: hsl(var(--secondary));
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  font-size: 10.5px;
+  font-weight: 700;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.channel-logo-upload:hover { border-color: hsl(var(--primary) / 0.55); background: hsl(var(--primary) / 0.08); color: hsl(var(--primary)); }
+.channel-logo-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+/* ────────────────────────────────────────────────────────────────────
+   6. KARTU NAV HUB — premium: bayangan + hover lift, rata kiri
+   ──────────────────────────────────────────────────────────────────── */
+.settings-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.settings-nav-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 16px;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--settings-radius, 14px);
+  background: hsl(var(--card));
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--settings-shadow);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.settings-nav-card:hover {
+  border-color: hsl(var(--primary) / 0.5);
+  box-shadow: var(--settings-shadow-hover);
+  transform: translateY(-2px);
+}
+.settings-nav-card:active { transform: translateY(0) scale(0.985); }
+.settings-nav-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 11px;
+  border: 1px solid hsl(var(--border));
   background: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--primary) / 0.12));
   color: hsl(var(--primary));
+  transition: background 0.18s ease;
 }
-.section-head h2 { letter-spacing: 0.01em; }
-.section-head p { margin-top: 3px; }
-.section-head > div { min-width: 0; }
-
-/* ── Form Profil: kolom nama & email lebar proporsional;
-      pesan error rapat kiri jadi tombol tetap di kanan bordir ─────── */
-.profile-form { align-items: center; }
-.account-error { margin-right: auto; }
-.account-actions { justify-content: flex-end; }
-.account-form .field small { font-size: 9.5px; margin-top: 2px; }
-
-/* ── Logo Kanal: satu struktur kolom di seluruh baris ───────────────
-      [avatar 34px] [nama lebar bebas] [badge baku] [aksi kanan]      */
-.channel-logo-row { padding: 10px 14px; align-items: center; }
-.channel-logo-preview { width: 34px; height: 34px; }
-.channel-logo-name { font-size: 12px; }
-.channel-logo-upload {
-  font-size: 10px;
-  padding: 6px 12px;
-  min-height: 32px;
-  border-radius: 8px;
+.settings-nav-card:hover .settings-nav-icon {
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.14), hsl(var(--primary) / 0.26));
 }
-.channel-logo-delete { font-size: 10px; border-radius: 8px; }
+.settings-nav-copy { flex: 1; min-width: 0; display: grid; gap: 3px; text-align: left; }
+.settings-nav-copy strong { font-size: 13px; display: flex; align-items: center; gap: 8px; letter-spacing: 0.01em; }
+.settings-nav-copy span { color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.5; }
+.settings-nav-access { font-size: 9px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: hsl(var(--muted-foreground)); margin-top: 2px; }
+.settings-nav-chevron { flex: none; color: hsl(var(--muted-foreground)); transition: transform 0.18s ease, color 0.18s ease; }
+.settings-nav-card:hover .settings-nav-chevron { transform: translateX(3px); color: hsl(var(--primary)); }
 
-/* ── Panel sub-halaman: jarak konsisten antar seksi & kepala panel ── */
-.panel.account-security, .panel.workspace-users { margin-top: 16px; }
-.profile-card + .account-security { margin-top: 16px; }
+/* ────────────────────────────────────────────────────────────────────
+   7. KARTU MODUL & PENGGUNA
+   ──────────────────────────────────────────────────────────────────── */
+.settings-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.module-card {
+  padding: 16px;
+  border-radius: var(--settings-radius, 14px);
+  display: flex; flex-direction: column; gap: 8px;
+  box-shadow: var(--settings-shadow);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.module-card:hover {
+  border-color: hsl(var(--primary) / 0.45);
+  box-shadow: var(--settings-shadow-hover);
+  transform: translateY(-2px);
+}
+.module-card h2 { margin: 3px 0 0; font-size: 13.5px; }
+.module-kicker { font-size: 8px; letter-spacing: 0.06em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+.module-card > p { color: hsl(var(--muted-foreground)); font-size: 10.5px; line-height: 1.55; }
+.module-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 11px; border-top: 1px solid hsl(var(--border)); }
+.module-state, .module-locked { display: inline-flex; align-items: center; gap: 4px; font-size: 9.5px; color: hsl(var(--muted-foreground)); }
+.module-locked { color: hsl(40 73% 38%); }
+.module-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  padding: 7px 13px;
+  background: hsl(var(--secondary));
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  font-size: 9.5px;
+  font-weight: 800;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.1s ease;
+}
+.module-toggle:hover:not(:disabled) { border-color: hsl(var(--primary) / 0.55); background: hsl(var(--primary) / 0.08); color: hsl(var(--primary)); }
+.module-toggle:active:not(:disabled) { transform: scale(0.96); }
+.module-toggle:disabled { cursor: not-allowed; opacity: 0.5; }
 
-/* Link "Edit profil" kembali rata kiri di mobile (aturan desktop
-   margin-left:auto tidak boleh bocor ke layar sempit). */
+.workspace-user-list { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-direction: column; border: 1px solid hsl(var(--border)); border-radius: 12px; overflow: hidden; box-shadow: var(--settings-shadow); }
+.workspace-user-list li { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid hsl(var(--border)); font-size: 11.5px; background: hsl(var(--card)); transition: background 0.15s ease; }
+.workspace-user-list li:hover { background: hsl(var(--secondary) / 0.45); }
+.workspace-user-list li:last-child { border-bottom: 0; }
+.workspace-user-avatar { width: 32px; height: 32px; border-radius: 50%; background: hsl(var(--secondary)); border: 1px solid hsl(var(--border)); display: inline-flex; align-items: center; justify-content: center; font: 700 10px var(--app-font-mono); color: hsl(var(--muted-foreground)); flex: none; }
+img.workspace-user-avatar { object-fit: cover; }
+.workspace-user-copy { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.workspace-user-copy strong { font-size: 12px; font-weight: 700; }
+.workspace-user-copy .workspace-user-email { color: hsl(var(--muted-foreground)); font-size: 10.5px; }
+.workspace-user-list .badge { margin-left: auto; flex: none; }
+
+.panel.account-security, .panel.workspace-users {
+  display: block;
+  padding: 20px 22px;
+  margin-bottom: 16px;
+  border-radius: var(--settings-radius, 14px);
+  box-shadow: var(--settings-shadow);
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   8. CATATAN & RESPONSIVE
+   ──────────────────────────────────────────────────────────────────── */
+.settings-footer-note {
+  text-align: center;
+  padding: 12px 18px;
+  color: hsl(var(--muted-foreground));
+  font-size: 10.5px;
+  border-style: dashed;
+  background: hsl(var(--muted) / 0.4);
+}
+.settings-note { display: inline-flex; align-items: center; gap: 7px; color: hsl(169 43% 37%); background: hsl(169 43% 47% / 0.1); padding: 10px 12px; border-radius: 9px; font-size: 10px; font-weight: 700; margin: 0 0 12px; }
+
+/* — TABLET (≤1024px): modul 2 kolom, sisanya mengalir — */
+@media (max-width: 1024px) {
+  .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* — MOBILE (≤640px): semua jadi LIST satu kolom sejajar kiri — */
 @media (max-width: 640px) {
-  .settings-intro-link { margin-left: 0; align-self: flex-start; }
+  .settings-nav { grid-template-columns: 1fr; gap: 10px; }
+  .settings-nav-card { padding: 14px; }
+  .settings-grid { grid-template-columns: 1fr; }
+  .settings-intro { flex-direction: column; align-items: flex-start; gap: 12px; padding: 18px; }
+  .settings-intro-link { margin-left: 0; align-self: flex-start; margin-top: 2px; }
+  .profile-form { flex-direction: column; align-items: stretch; gap: 14px; }
+  .profile-avatar { align-self: center; }
+  .profile-form-fields { grid-template-columns: 1fr; min-width: 0; align-items: stretch; }
+  .account-form { grid-template-columns: 1fr; }
+  .account-actions { flex-direction: column-reverse; align-items: stretch; gap: 8px; }
+  .account-actions .btn { width: 100%; justify-content: center; min-height: 40px; }
+  .account-error { margin-right: 0; text-align: left; }
+  .channel-logo-row { display: flex; flex-wrap: wrap; row-gap: 8px; padding: 12px; }
+  .channel-logo-name { flex: 1 1 auto; }
+  .channel-logo-row .badge { margin-left: auto; }
+  .channel-logo-upload, .channel-logo-row .btn.channel-logo-delete { flex: 1 1 46%; justify-content: center; }
+  .panel.account-security, .panel.workspace-users { padding: 16px; }
+  .section-head { gap: 10px; margin-bottom: 14px; }
 }

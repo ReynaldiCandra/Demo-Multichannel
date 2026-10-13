@@ -46,7 +46,7 @@ export function SettingsIdentity() {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={session.data.imageUrl} alt="" />
         ) : (
-          <CircleUserRound size={26} />
+          <CircleUserRound size={16} />
         )}
       </span>
       <div>
@@ -77,30 +77,35 @@ const NAV_CARDS = [
     href: '/pengaturan/profil',
     icon: CircleUserRound,
     title: 'Profil & keamanan',
-    description: 'Foto profil, nama, dan ganti password milik kamu sendiri.',
+    description: 'Foto, nama, dan ganti password akun kamu sendiri.',
+    access: 'Semua pengguna',
+    ownerOnly: false,
   },
   {
     href: '/pengaturan/logo-kanal',
     icon: ImageUp,
     title: 'Logo kanal',
-    description:
-      'Upload logo Shopee, TikTok Shop, Lazada, dan lainnya — tampil di semua halaman seperti logo toko.',
+    description: 'Logo Shopee, TikTok Shop, Lazada, dll. — tampil di seluruh aplikasi.',
+    access: 'Semua pengguna',
+    ownerOnly: false,
   },
   {
     href: '/pengaturan/pengguna',
     icon: UsersRound,
     title: 'Pengguna workspace',
-    description: 'Daftar & tambah staf: owner, pengguna, demo — hak akses dijaga di server.',
+    description: 'Daftar staf & tambah user baru dengan role yang jelas.',
+    access: 'Owner',
+    ownerOnly: true,
   },
   {
     href: '/pengaturan/modul',
     icon: Settings2,
     title: 'Modul',
-    description: 'Nyalakan/matikan bagian aplikasi yang dipakai; data tidak hilang.',
+    description: 'Nyalakan/matikan bagian aplikasi — data tetap aman.',
+    access: 'Owner',
+    ownerOnly: true,
   },
 ] as const;
-
-const OWNER_ONLY_CARDS = new Set(['/pengaturan/pengguna', '/pengaturan/modul']);
 
 export function SettingsNavCards() {
   const session = useSession();
@@ -108,8 +113,7 @@ export function SettingsNavCards() {
     <div className="settings-nav">
       {NAV_CARDS.map((card) => {
         const Icon = card.icon;
-        const locked =
-          OWNER_ONLY_CARDS.has(card.href) && session.data?.role !== 'owner';
+        const locked = card.ownerOnly && session.data?.role !== 'owner';
         return (
           <Link
             key={card.href}
@@ -118,7 +122,7 @@ export function SettingsNavCards() {
             data-testid={`link-settings-${card.href.split('/').pop()}`}
           >
             <span className="settings-nav-icon">
-              <Icon size={17} />
+              <Icon size={18} />
             </span>
             <span className="settings-nav-copy">
               <strong>
@@ -126,6 +130,7 @@ export function SettingsNavCards() {
                 {locked && <Badge tone="neutral">Owner</Badge>}
               </strong>
               <span>{card.description}</span>
+              <em className="settings-nav-access">{card.access}</em>
             </span>
             <ChevronRight size={15} className="settings-nav-chevron" />
           </Link>
@@ -174,7 +179,7 @@ export function ProfileSection() {
       <Panel className="profile-card">
         <div className="section-head">
           <span className="settings-symbol settings-symbol-sm">
-            <LockKeyhole size={16} />
+            <LockKeyhole size={15} />
           </span>
           <div>
             <h2>Profil & foto</h2>
@@ -265,14 +270,11 @@ function ChangePasswordSection({ isDemo }: { isDemo: boolean }) {
     <section>
       <div className="section-head">
         <span className="settings-symbol settings-symbol-sm">
-          <KeyRound size={16} />
+          <KeyRound size={15} />
         </span>
         <div>
           <h2>Ganti password</h2>
-          <p>
-            {session.data?.email ? `Akun ${session.data.email}` : 'Akun kamu'} — password baru
-            minimal 8 karakter.
-          </p>
+          <p>Password baru minimal 8 karakter.</p>
         </div>
       </div>
       <form className="account-form" onSubmit={submit}>
@@ -354,14 +356,12 @@ export function ChannelLogos({ isDemo }: { isDemo: boolean }) {
     <section>
       <div className="section-head">
         <span className="settings-symbol settings-symbol-sm">
-          <ImageUp size={16} />
+          <ImageUp size={15} />
         </span>
         <div>
           <h2>Logo kanal marketplace</h2>
           <p>
-            Upload logo per kanal (Shopee, TikTok Shop, Lazada, dan lainnya) — otomatis tampil
-            di semua halaman: Penjualan, Analisa Toko, Produk & Stok, dan lainnya, persis seperti
-            logo toko.
+            Satu logo per kanal — tampil otomatis di semua halaman yang memakai nama kanal.
           </p>
         </div>
       </div>

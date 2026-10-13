@@ -19,9 +19,8 @@ export default function SettingsPage() {
       <SettingsIdentity />
       <SettingsNavCards />
       <Panel className="settings-footer-note">
-        Profil & keamanan serta logo kanal bisa diatur semua pengguna —
-        modul dan pengguna workspace hanya untuk owner. Semua perubahan langsung
-        tersimpan di server.
+        Profil & logo kanal bisa diatur semua pengguna — modul & pengguna
+        khusus owner. Semua perubahan tersimpan otomatis di server.
       </Panel>
     </>
   );
