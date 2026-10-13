@@ -17,6 +17,7 @@ import type { SettlementRow } from '@/lib/api/types';
 import {
   Badge,
   Button,
+  ChannelAvatar,
   ConfirmDialog,
   Field,
   KpiCard,
@@ -291,7 +292,10 @@ function SettlementView({ month }: { month: string }) {
                 {rows.map((row) => (
                   <tr key={row.storeId} data-testid={`row-settlement-${row.storeId}`}>
                     <td>
-                      <strong>{row.storeName}</strong>
+                      <span className="store-cell">
+                        <ChannelAvatar channel={row.channel} className="pill-avatar" />
+                        <strong>{row.storeName}</strong>
+                      </span>
                       <span className="table-sub">{row.channel}</span>
                     </td>
                     <td className="right mono">{money(row.revenue)}</td>
