@@ -65,7 +65,7 @@ export type SaleRow = {
   imageUrl: string | null;
 };
 
-export type SaleStatus = 'selesai' | 'batal' | 'retur';
+export type SaleStatus = 'selesai' | 'batal' | 'retur' | 'sedang_dikirim';
 
 export type SettlementStatus = 'pending' | 'released';
 
@@ -432,6 +432,8 @@ export type SalesReport = {
   excluded: {
     batal: { transactions: number; pcs: number; revenue: number };
     retur: { transactions: number; pcs: number; revenue: number };
+    /** Pesanan sedang dikirim — dana belum pasti masuk, tidak dihitung omzet. */
+    dikirim: { transactions: number; pcs: number; revenue: number };
   };
   daily: Array<{ date: string; pcs: number; revenue: number; profit: number }>;
   filters: {

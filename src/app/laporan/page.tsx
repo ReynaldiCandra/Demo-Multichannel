@@ -161,9 +161,9 @@ function LedgerView({
             </div>
             <ShoppingBag size={18} className="muted" />
           </div>
-          <LedgerMetric label="Pendapatan" value={selected.posRevenue} />
-          <LedgerMetric label="Modal" value={selected.posCost} negative />
-          <LedgerMetric label="Profit POS" value={selected.posProfit} strong />
+          <LedgerSection label="Pendapatan" value={selected.posRevenue} tone="positive" />
+          <LedgerSection label="Modal" value={selected.posCost} tone="negative" />
+          <LedgerSection label="Profit POS" value={selected.posProfit} tone="auto" strong />
         </Panel>
 
         <Panel>
@@ -174,9 +174,9 @@ function LedgerView({
             </div>
             <BriefcaseBusiness size={18} className="muted" />
           </div>
-          <LedgerMetric label="Pendapatan" value={selected.jobIncome} />
-          <LedgerMetric label="Biaya" value={selected.jobCost} negative />
-          <LedgerMetric label="Profit jobs" value={selected.jobProfit} strong />
+          <LedgerSection label="Pendapatan" value={selected.jobIncome} tone="positive" />
+          <LedgerSection label="Biaya" value={selected.jobCost} tone="negative" />
+          <LedgerSection label="Profit jobs" value={selected.jobProfit} tone="auto" strong />
         </Panel>
       </div>
 
@@ -197,7 +197,9 @@ function LedgerView({
               data-testid={`button-ledger-month-${item.month}`}
             >
               <span>{monthLabel(item.month)}</span>
-              <b className="mono">{money(item.netProfit)}</b>
+              <b className={cn('mono', item.netProfit >= 0 ? 'profit-text' : 'negative')}>
+                {money(item.netProfit)}
+              </b>
               <ChevronRight size={15} />
             </button>
           ))}
@@ -432,22 +434,26 @@ function ReleaseModal({
   );
 }
 
-function LedgerMetric({
+function LedgerSection({
   label,
   value,
-  negative,
+  tone,
   strong,
 }: {
   label: string;
   value: number;
-  negative?: boolean;
+  /** positive = selalu hijau (pendapatan), negative = selalu merah (modal/biaya),
+   *  auto = ikut tanda angka (profit bisa minus). */
+  tone: 'auto' | 'positive' | 'negative';
   strong?: boolean;
 }) {
+  const colorClass =
+    tone === 'positive' ? 'profit-text' : tone === 'negative' ? 'negative' : value >= 0 ? 'profit-text' : 'negative';
   return (
     <div className={cn('ledger-metric', strong && 'strong')}>
       <span>{label}</span>
-      <b className={cn('mono', negative && 'negative')}>
-        {negative ? `− ${money(value)}` : money(value)}
+      <b className={cn('mono', colorClass)}>
+        {value < 0 ? `− ${money(Math.abs(value))}` : money(value)}
       </b>
     </div>
   );

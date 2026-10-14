@@ -394,11 +394,17 @@ function SummaryCards({ report }: { report: SalesReport }) {
 }
 
 function ExcludedNote({ excluded }: { excluded: SalesReport['excluded'] }) {
-  const { batal, retur } = excluded;
-  if (!batal.transactions && !retur.transactions) return null;
+  const { batal, retur, dikirim } = excluded;
+  if (!batal.transactions && !retur.transactions && !dikirim.transactions) return null;
   return (
     <div className="report-note" data-testid="note-excluded">
       <span>Tidak dihitung di omzet &amp; profit:</span>
+      {dikirim.transactions > 0 && (
+        <span>
+          Sedang dikirim <b>{number(dikirim.transactions)}</b> transaksi · {number(dikirim.pcs)} pcs ·{' '}
+          {money(dikirim.revenue)}
+        </span>
+      )}
       {batal.transactions > 0 && (
         <span>
           Batal <b>{number(batal.transactions)}</b> transaksi · {number(batal.pcs)} pcs ·{' '}

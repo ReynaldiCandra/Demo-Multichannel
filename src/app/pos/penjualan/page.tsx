@@ -38,7 +38,7 @@ export default function PenjualanPage() {
 
   const rows = sales.data ?? [];
   const counts = useMemo(() => {
-    const result = { all: rows.length, selesai: 0, batal: 0, retur: 0 };
+    const result = { all: rows.length, selesai: 0, batal: 0, retur: 0, sedang_dikirim: 0 };
     for (const sale of rows) result[sale.status] += 1;
     return result;
   }, [rows]);
@@ -92,7 +92,7 @@ export default function PenjualanPage() {
 
       <div className="filter-row filter-row-wrap">
         <div className="tabs">
-          {(['all', 'selesai', 'batal', 'retur'] as const).map((key) => (
+          {(['all', 'selesai', 'sedang_dikirim', 'batal', 'retur'] as const).map((key) => (
             <button
               type="button"
               key={key}

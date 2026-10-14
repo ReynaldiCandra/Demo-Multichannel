@@ -98,7 +98,9 @@ export const ProductInput = z.object({
   isActive: z.boolean().optional().default(true),
 });
 
-export const SALE_STATUSES = ['selesai', 'batal', 'retur'] as const;
+// "sedang_dikirim" = pesanan sudah dikirim ke pembeli tetapi dana belum
+// pasti masuk, jadi tidak dihitung di omzet & profit (senada batal/retur).
+export const SALE_STATUSES = ['selesai', 'batal', 'retur', 'sedang_dikirim'] as const;
 export type SaleStatus = (typeof SALE_STATUSES)[number];
 
 export const SaleInput = z.object({

@@ -292,10 +292,11 @@ export type SalesReport = {
       revenueShare: number;
     }
   >;
-  /** Batal dan retur: dicatat tapi TIDAK ikut omzet/profit. */
+  /** Batal, retur, dan sedang dikirim: dicatat tapi TIDAK ikut omzet/profit. */
   excluded: {
     batal: { transactions: number; pcs: number; revenue: number };
     retur: { transactions: number; pcs: number; revenue: number };
+    dikirim: { transactions: number; pcs: number; revenue: number };
   };
   daily: Array<{ date: string; pcs: number; revenue: number; profit: number }>;
   filters: {
@@ -550,7 +551,11 @@ export async function getSalesReport(filters: SalesReportFilters = {}): Promise<
         revenueShare: percent(m.revenue, totals.revenue),
       };
     }),
-    excluded: { batal: excludedFor('batal'), retur: excludedFor('retur') },
+    excluded: {
+      batal: excludedFor('batal'),
+      retur: excludedFor('retur'),
+      dikirim: excludedFor('sedang_dikirim'),
+    },
     daily: dailyRows.map((row) => ({
       date: row.date,
       pcs: toNumber(row.pcs),

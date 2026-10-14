@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
-import { ExternalLink, Eye, Pencil, Trash2 } from 'lucide-react';
+import { useRef, useState, useEffect, useMemo, type FormEvent } from 'react';
+import { ChevronDown, ExternalLink, Eye, Package, Pencil, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useCreateSale,
@@ -30,13 +30,186 @@ export const STATUS_LABEL: Record<SaleStatus, string> = {
   selesai: 'Selesai',
   batal: 'Batal',
   retur: 'Retur',
+  sedang_dikirim: 'Sedang dikirim',
 };
-export const STATUS_TONE: Record<SaleStatus, 'good' | 'neutral' | 'danger'> = {
+export const STATUS_TONE: Record<SaleStatus, 'good' | 'neutral' | 'warn' | 'danger'> = {
   selesai: 'good',
   batal: 'neutral',
   retur: 'danger',
+  // Pesanan sudah jalan tapi dana belum pasti masuk — kuning (warn).
+  sedang_dikirim: 'warn',
 };
 export const PAGE_SIZE = 10;
+
+/**
+ * Pemilih produk berbasis pencarian (combobox). <select> biasa tidak layak
+ * untuk katalog 500+ produk: lambat, tidak bisa dicari, dan jelek di HP.
+ * Menampilkan thumbnail gambar produk (kolom products.image_url) beserta
+ * toko/kanal & harga jual supaya pemilihan tetap tepat di katalog besar.
+ */
+export function ProductPicker({
+  products,
+  value,
+  onChange,
+}: {
+  products: ProductRow[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [storeFilter, setStoreFilter] = useState('all');
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  const selected = products.find((item) => item.id === value) ?? null;
+
+  // Toko/kanal unik dari daftar produk, untuk filter di dalam menu.
+  const stores = useMemo(() => {
+    const map = new Map<string, { id: string; label: string }>();
+    for (const item of products) {
+      if (!map.has(item.storeId)) {
+        map.set(item.storeId, { id: item.storeId, label: `${item.storeName} (${item.channel})` });
+      }
+    }
+    return [...map.values()];
+  }, [products]);
+
+  // Tutup saat klik di luar menu — tanpa scrim supaya submit form tetap normal.
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  const term = search.trim().toLowerCase();
+  const matches = useMemo(() => {
+    return products.filter((item) => {
+      if (storeFilter !== 'all' && item.storeId !== storeFilter) return false;
+      if (!term) return false;
+      return (
+        item.name.toLowerCase().includes(term) ||
+        item.storeName.toLowerCase().includes(term) ||
+        (item.supplierName ?? '').toLowerCase().includes(term)
+      );
+    });
+  }, [products, storeFilter, term]);
+
+  const MAX_SHOWN = 60;
+  const shown = matches.slice(0, MAX_SHOWN);
+
+  return (
+    <div className="product-picker" ref={rootRef}>
+      {open ? (
+        <div className="product-picker-menu" data-testid="product-picker-menu">
+          <div className="product-picker-tools">
+            <div className="search-box product-picker-search">
+              <Search size={13} />
+              <input
+                autoFocus
+                type="search"
+                placeholder="Ketik nama produk / suplier / toko…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                data-testid="input-product-search"
+              />
+            </div>
+            <select
+              aria-label="Filter toko/kanal"
+              value={storeFilter}
+              onChange={(event) => setStoreFilter(event.target.value)}
+              data-testid="select-product-picker-store"
+            >
+              <option value="all">Semua toko</option>
+              {stores.map((store) => (
+                <option key={store.id} value={store.id}>
+                  {store.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="product-picker-list">
+            {shown.map((item) => (
+              <button
+                type="button"
+                key={item.id}
+                className={cn('product-picker-option', item.id === value && 'active')}
+                onClick={() => {
+                  onChange(item.id);
+                  setOpen(false);
+                }}
+                data-testid={`option-product-${item.id}`}
+              >
+                {item.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.imageUrl} alt="" className="product-thumb product-thumb-small" />
+                ) : (
+                  <span className="product-thumb product-thumb-small product-thumb-empty">
+                    <Package size={14} />
+                  </span>
+                )}
+                <span className="product-picker-copy">
+                  <strong>{item.name}</strong>
+                  <small>
+                    {item.storeName} ({item.channel}) · {money(item.sellingPrice)}
+                    {item.supplierName ? ` · ${item.supplierName}` : ''}
+                  </small>
+                </span>
+              </button>
+            ))}
+            {!shown.length && (
+              <div className="product-picker-empty muted">
+                {term ? `Tidak ada produk yang cocok dengan “${search}”.` : 'Ketik untuk mencari produk…'}
+              </div>
+            )}
+          </div>
+
+          {matches.length > shown.length && (
+            <small className="muted product-picker-more">
+              {number(shown.length)} dari {number(matches.length)} — pertajam pencarian untuk hasil sepsisif.
+            </small>
+          )}
+        </div>
+      ) : (
+        <button
+          type="button"
+          className={cn('product-picker-trigger', !selected && 'placeholder')}
+          onClick={() => setOpen(true)}
+          aria-expanded={open}
+          data-testid="button-product-picker-trigger"
+        >
+          {selected?.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={selected.imageUrl} alt="" className="product-thumb product-thumb-small" />
+          ) : (
+            <span className="product-thumb product-thumb-small product-thumb-empty">
+              <Package size={14} />
+            </span>
+          )}
+          <span className="product-picker-copy">
+            <strong>{selected ? selected.name : 'Pilih produk'}</strong>
+            <small>
+              {selected
+                ? `${selected.storeName} (${selected.channel}) · ${money(selected.sellingPrice)}`
+                : 'Klik lalu ketik untuk mencari' }
+            </small>
+          </span>
+          <ChevronDown size={15} className="muted" />
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function SaleFormModal({
   sale,
@@ -98,6 +271,11 @@ export function SaleFormModal({
       orderNumber: String(form.get('orderNumber') || '').trim() || null,
       imageUrl,
     };
+    // Pemilih produk bukan <select required>, jadi divalidasi manual di sini.
+    if (!data.productId) {
+      toast.error('Pilih produk terlebih dahulu.');
+      return;
+    }
     if (sale) update.mutate({ saleId: sale.id, data });
     else create.mutate({ data });
   };
@@ -106,19 +284,7 @@ export function SaleFormModal({
     <Modal title={sale ? 'Edit penjualan' : 'Catat penjualan'} onClose={onClose}>
       <form className="form-grid" onSubmit={submit}>
         <Field label="Produk">
-          <select
-            value={productId}
-            onChange={(event) => chooseProduct(event.target.value)}
-            required
-            data-testid="select-sale-product"
-          >
-            <option value="">Pilih produk</option>
-            {products.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} · {item.storeName} ({item.channel})
-              </option>
-            ))}
-          </select>
+          <ProductPicker products={products} value={productId} onChange={chooseProduct} />
         </Field>
         <Field label="Nomor pesanan" hint="Opsional. Pesanan yang sama tidak bisa dicatat dua kali.">
           <input
@@ -141,6 +307,7 @@ export function SaleFormModal({
         <Field label="Status pesanan">
           <select name="status" defaultValue={sale?.status ?? 'selesai'} data-testid="select-sale-status">
             <option value="selesai">Selesai</option>
+            <option value="sedang_dikirim">Sedang dikirim</option>
             <option value="batal">Batal</option>
             <option value="retur">Retur</option>
           </select>
@@ -454,6 +621,7 @@ export function SalesTable({
                         data-testid={`select-status-${sale.id}`}
                       >
                         <option value="selesai">Selesai</option>
+                        <option value="sedang_dikirim">Sedang dikirim</option>
                         <option value="batal">Batal</option>
                         <option value="retur">Retur</option>
                       </select>
