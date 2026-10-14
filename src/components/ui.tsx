@@ -1,7 +1,7 @@
 'use client';
 
 import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, CircleAlert, Eye, EyeOff, Package, RefreshCw, X, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleAlert, Eye, EyeOff, Package, RefreshCw, X, type LucideIcon, type LucideProps } from 'lucide-react';
 import { useState } from 'react';
 import { useListChannelLogos } from '@/lib/api/hooks';
 import { channelBrandClass, channelBrandLogo, cn } from '@/lib/format';
@@ -9,14 +9,47 @@ import { channelBrandClass, channelBrandLogo, cn } from '@/lib/format';
 export function Button({
   children,
   variant = 'primary',
+  size = 'default',
   className,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  size?: 'default' | 'compact';
 }) {
   return (
-    <button className={cn('btn', `btn-${variant}`, className)} {...props}>
+    <button className={cn('btn', `btn-${variant}`, size === 'compact' ? 'btn-compact' : '', className)} {...props}>
       {children}
+    </button>
+  );
+}
+
+export function Switch({
+  checked,
+  onChange,
+  disabled,
+  label,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+  label?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        'switch',
+        checked && 'switch-on',
+        disabled && 'switch-disabled',
+      )}
+    >
+      <span className="switch-track" />
+      <span className="switch-thumb" />
+      {label && <span className="switch-label">{label}</span>}
     </button>
   );
 }

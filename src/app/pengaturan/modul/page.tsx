@@ -8,8 +8,9 @@ import { ModulesGrid } from '../_sections';
 export default function SettingsModulesPage() {
   return (
     <>
+      <div className="back-wrap" />
       <Link href="/pengaturan" className="back-link">
-        <ChevronLeft size={14} /> Kembali ke pengaturan
+        <ChevronLeft size={14} /> Kembali
       </Link>
       <PageTitle
         eyebrow="PENGATURAN / MODUL"

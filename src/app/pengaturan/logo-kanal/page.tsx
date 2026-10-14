@@ -21,9 +21,7 @@ export default function SettingsChannelLogosPage() {
         description="Satu logo per kanal, dipakai seragam di Dashboard, Toko, Penjualan, Analisa, dan lainnya."
       />
       <RoleNotice isDemo={isDemo} />
-      <Panel>
-        <ChannelLogos isDemo={isDemo} />
-      </Panel>
+      <ChannelLogos isDemo={isDemo} />
     </>
   );
 }

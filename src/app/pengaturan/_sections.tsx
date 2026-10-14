@@ -1,19 +1,19 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import Link from 'next/link';
 import {
   Check,
-  ChevronRight,
   CircleUserRound,
   ImageUp,
   KeyRound,
   LockKeyhole,
   Power,
-  Settings2,
+  RefreshCw,
   Trash2,
-  UserPlus,
   UsersRound,
+  Settings2,
+  Plus,
+  AlertCircle,
 } from 'lucide-react';
 import {
   useChangePassword,
@@ -33,126 +33,24 @@ import {
 import { Badge, Button, ChannelAvatar, Field, Panel, PasswordInput, State } from '@/components/ui';
 
 /* ------------------------------------------------------------------ */
-/* Kartu identitas (hub): avatar foto + nama + email + role            */
-/* ------------------------------------------------------------------ */
-
-export function SettingsIdentity() {
-  const session = useSession();
-
-  return (
-    <Panel className="settings-intro">
-      <span className="settings-avatar" aria-hidden="true">
-        {session.data?.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={session.data.imageUrl} alt="" />
-        ) : (
-          <CircleUserRound size={16} />
-        )}
-      </span>
-      <div>
-        <div className="eyebrow">AKUN SAAT INI</div>
-        <h2>{session.data?.name ?? 'Memuat…'}</h2>
-        <p>
-          {session.data?.email ?? '—'} ·{' '}
-          {session.data?.role === 'demo'
-            ? 'mode demo, hanya melihat'
-            : session.data?.role === 'owner'
-              ? 'akun owner, akses penuh'
-              : 'akun pengguna'}
-        </p>
-      </div>
-      <Link href="/pengaturan/profil" className="settings-intro-link">
-        Edit profil <ChevronRight size={14} />
-      </Link>
-    </Panel>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Kartu navigasi hub — satu use case, satu halaman                   */
-/* ------------------------------------------------------------------ */
-
-const NAV_CARDS = [
-  {
-    href: '/pengaturan/profil',
-    icon: CircleUserRound,
-    title: 'Profil & keamanan',
-    description: 'Foto, nama, dan ganti password akun kamu sendiri.',
-    access: 'Semua pengguna',
-    ownerOnly: false,
-  },
-  {
-    href: '/pengaturan/logo-kanal',
-    icon: ImageUp,
-    title: 'Logo kanal',
-    description: 'Logo Shopee, TikTok Shop, Lazada, dll. — tampil di seluruh aplikasi.',
-    access: 'Semua pengguna',
-    ownerOnly: false,
-  },
-  {
-    href: '/pengaturan/pengguna',
-    icon: UsersRound,
-    title: 'Pengguna workspace',
-    description: 'Daftar staf & tambah user baru dengan role yang jelas.',
-    access: 'Owner',
-    ownerOnly: true,
-  },
-  {
-    href: '/pengaturan/modul',
-    icon: Settings2,
-    title: 'Modul',
-    description: 'Nyalakan/matikan bagian aplikasi — data tetap aman.',
-    access: 'Owner',
-    ownerOnly: true,
-  },
-] as const;
-
-export function SettingsNavCards() {
-  const session = useSession();
-  return (
-    <div className="settings-nav">
-      {NAV_CARDS.map((card) => {
-        const Icon = card.icon;
-        const locked = card.ownerOnly && session.data?.role !== 'owner';
-        return (
-          <Link
-            key={card.href}
-            href={card.href}
-            className="settings-nav-card"
-            data-testid={`link-settings-${card.href.split('/').pop()}`}
-          >
-            <span className="settings-nav-icon">
-              <Icon size={18} />
-            </span>
-            <span className="settings-nav-copy">
-              <strong>
-                {card.title}
-                {locked && <Badge tone="neutral">Owner</Badge>}
-              </strong>
-              <span>{card.description}</span>
-              <em className="settings-nav-access">{card.access}</em>
-            </span>
-            <ChevronRight size={15} className="settings-nav-chevron" />
-          </Link>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Profil: foto + nama, lalu ganti password (dua panel berurutan)      */
+/* Profil & keamanan                                                 */
 /* ------------------------------------------------------------------ */
 
 export function ProfileSection() {
   const session = useSession();
   const update = useUpdateMyProfile();
-  const [name, setName] = useState<string | null>(null);
-  const [photoBusy, setPhotoBusy] = useState(false);
+  const changePassword = useChangePassword({
+    onSuccess: () => setForm({ currentPassword: '', newPassword: '', confirm: '' }),
+  });
 
   const isDemo = session.data?.role === 'demo';
   const savedName = session.data?.name ?? '';
   const imageUrl = session.data?.imageUrl ?? null;
+
+  const [name, setName] = useState<string | null>(null);
+  const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirm: '' });
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const saveProfile = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -174,43 +72,89 @@ export function ProfileSection() {
 
   const removePhoto = () => update.mutate({ data: { imageUrl: null } });
 
+  const submitPassword = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+    if (form.newPassword !== form.confirm) {
+      setError('Konfirmasi password tidak sama');
+      return;
+    }
+    changePassword.mutate({
+      data: { currentPassword: form.currentPassword, newPassword: form.newPassword },
+    });
+  };
+
   return (
-    <>
-      <Panel className="profile-card">
-        <div className="section-head">
-          <span className="settings-symbol settings-symbol-sm">
-            <LockKeyhole size={15} />
+    <div className="settings-one-card-layout">
+      <section className="settings-card">
+        <div className="settings-card-head">
+          <span className="settings-symbol">
+            <CircleUserRound size={14} />
           </span>
-          <div>
-            <h2>Profil & foto</h2>
-            <p>Identitas akun kamu — foto tampil di avatar seluruh aplikasi.</p>
+          <div className="settings-card-text">
+            <h2 className="settings-card-title">Profil</h2>
+            <p className="settings-card-desc">Foto, nama, dan ganti password akun kamu sendiri.</p>
           </div>
         </div>
 
-        <form className="profile-form" onSubmit={saveProfile}>
-          <label className="profile-avatar" title="Ganti foto profil">
-            {imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageUrl} alt="foto profil" />
-            ) : (
-              <span>{savedName.trim().slice(0, 2).toUpperCase() || '—'}</span>
-            )}
-            <input
-              type="file"
-              accept="image/png, image/jpeg, image/webp"
-              disabled={isDemo || photoBusy}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                event.target.value = '';
-                void handlePhoto(file);
-              }}
-            />
-            <span className="profile-avatar-action">
-              <ImageUp size={12} /> {photoBusy ? 'Mengunggah…' : imageUrl ? 'Ganti' : 'Upload'}
-            </span>
-          </label>
+        <div className="profile-grid">
+          <div className="profile-col">
+            <div className="profile-identity">
+              <div className="profile-avatar">
+                {imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imageUrl} alt="foto profil" />
+                ) : (
+                  <span className="profile-avatar-fallback">
+                    {savedName.trim().slice(0, 2).toUpperCase() || '—'}
+                  </span>
+                )}
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp"
+                  disabled={isDemo || photoBusy}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = '';
+                    void handlePhoto(file);
+                  }}
+                />
+              </div>
+              <div className="profile-avatar-footer">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="compact"
+                  disabled={isDemo || photoBusy}
+                  onClick={() => {
+                    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+                    input?.click();
+                  }}
+                >
+                  {photoBusy ? (
+                    <>
+                      <RefreshCw size={11} className="rotate-cw" /> Uploading…
+                    </>
+                  ) : (
+                    <>
+                      <ImageUp size={11} /> Upload
+                    </>
+                  )}
+                </Button>
+                {imageUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="compact"
+                    onClick={removePhoto}
+                    disabled={isDemo || update.isPending}
+                  >
+                    <Trash2 size={11} /> Hapus
+                  </Button>
+                )}
+              </div>
+            </div>
 
-          <div className="profile-form-fields">
             <Field label="Nama" hint="Dipakai di avatar & sapaan dashboard.">
               <input
                 type="text"
@@ -224,104 +168,67 @@ export function ProfileSection() {
             <Field label="Email">
               <input type="email" value={session.data?.email ?? ''} disabled />
             </Field>
-          </div>
 
-          <div className="account-actions">
-            {imageUrl && (
-              <Button type="button" variant="ghost" onClick={removePhoto} disabled={isDemo || update.isPending}>
-                <Trash2 size={13} /> Hapus foto
+            <div className="profile-actions">
+              <Button type="submit" disabled={isDemo || update.isPending || name === null}>
+                {update.isPending ? 'Menyimpan…' : 'Simpan profil'}
               </Button>
-            )}
-            <Button type="submit" disabled={isDemo || update.isPending || name === null}>
-              {update.isPending ? 'Menyimpan…' : 'Simpan profil'}
-            </Button>
+            </div>
           </div>
-        </form>
-      </Panel>
 
-      <Panel className="account-security">
-        <ChangePasswordSection isDemo={isDemo} />
-      </Panel>
-    </>
-  );
-}
+          <div className="profile-col">
+            <h3 className="profile-col-heading">Keamanan</h3>
+            <p className="profile-col-desc">Password yang hanya kamu yang tahu.</p>
 
-function ChangePasswordSection({ isDemo }: { isDemo: boolean }) {
-  const session = useSession();
-  const changePassword = useChangePassword({
-    onSuccess: () => setForm({ currentPassword: '', newPassword: '', confirm: '' }),
-  });
-  const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirm: '' });
-  const [error, setError] = useState<string | null>(null);
+            <form className="settings-form" onSubmit={submitPassword}>
+              <Field label="Password lama">
+                <PasswordInput
+                  required
+                  autoComplete="current-password"
+                  value={form.currentPassword}
+                  onChange={(event) => setForm({ ...form, currentPassword: event.target.value })}
+                />
+              </Field>
+              <Field label="Password baru" hint="Minimal 8 karakter">
+                <PasswordInput
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  value={form.newPassword}
+                  onChange={(event) => setForm({ ...form, newPassword: event.target.value })}
+                />
+              </Field>
+              <Field label="Ulangi password baru">
+                <PasswordInput
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  value={form.confirm}
+                  onChange={(event) => setForm({ ...form, confirm: event.target.value })}
+                />
+              </Field>
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError(null);
-    if (form.newPassword !== form.confirm) {
-      setError('Konfirmasi password tidak sama');
-      return;
-    }
-    changePassword.mutate({
-      data: { currentPassword: form.currentPassword, newPassword: form.newPassword },
-    });
-  };
-
-  return (
-    <section>
-      <div className="section-head">
-        <span className="settings-symbol settings-symbol-sm">
-          <KeyRound size={15} />
-        </span>
-        <div>
-          <h2>Ganti password</h2>
-          <p>Password baru minimal 8 karakter.</p>
+              <div className="settings-form-actions">
+                {error && <span className="settings-form-error">{error}</span>}
+                {changePassword.isError && (
+                  <span className="settings-form-error">
+                    {(changePassword.error as Error)?.message || 'Gagal mengganti password'}
+                  </span>
+                )}
+                <Button type="submit" disabled={changePassword.isPending || isDemo}>
+                  {changePassword.isPending ? 'Menyimpan…' : 'Simpan password baru'}
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
-      <form className="account-form" onSubmit={submit}>
-        <Field label="Password lama">
-          <PasswordInput
-            required
-            autoComplete="current-password"
-            value={form.currentPassword}
-            onChange={(event) => setForm({ ...form, currentPassword: event.target.value })}
-          />
-        </Field>
-        <Field label="Password baru">
-          <PasswordInput
-            required
-            minLength={8}
-            autoComplete="new-password"
-            value={form.newPassword}
-            onChange={(event) => setForm({ ...form, newPassword: event.target.value })}
-          />
-        </Field>
-        <Field label="Ulangi password baru">
-          <PasswordInput
-            required
-            minLength={8}
-            autoComplete="new-password"
-            value={form.confirm}
-            onChange={(event) => setForm({ ...form, confirm: event.target.value })}
-          />
-        </Field>
-        <div className="account-actions">
-          {error && <span className="account-error">{error}</span>}
-          {changePassword.isError && (
-            <span className="account-error">
-              {(changePassword.error as Error)?.message || 'Gagal mengganti password'}
-            </span>
-          )}
-          <Button type="submit" disabled={changePassword.isPending || isDemo}>
-            {changePassword.isPending ? 'Menyimpan…' : 'Simpan password baru'}
-          </Button>
-        </div>
-      </form>
-    </section>
+      </section>
+    </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Logo kanal (dipindah ke /pengaturan/logo-kanal)                     */
+/* Logo kanal                                                        */
 /* ------------------------------------------------------------------ */
 
 export function ChannelLogos({ isDemo }: { isDemo: boolean }) {
@@ -331,8 +238,6 @@ export function ChannelLogos({ isDemo }: { isDemo: boolean }) {
   const remove = useDeleteChannelLogo();
   const [busyChannel, setBusyChannel] = useState<string | null>(null);
 
-  // Kanal unik dari data toko — satu baris UI per kanal, nama tampil apa
-  // adanya (pemakaian pertama).
   const channels = new Map<string, string>();
   for (const store of stores.data ?? []) {
     const key = store.channel.toLowerCase().trim();
@@ -346,82 +251,106 @@ export function ChannelLogos({ isDemo }: { isDemo: boolean }) {
       const { url } = await uploadChannelLogo(file);
       await save.mutateAsync({ channel, logoUrl: url });
     } catch {
-      // Toast gagal sudah ditampilkan oleh onError hook — tidak perlu ganda.
+      // Toast gagal sudah ditampilkan oleh onError hook.
     } finally {
       setBusyChannel(null);
     }
   };
 
   return (
-    <section>
-      <div className="section-head">
-        <span className="settings-symbol settings-symbol-sm">
-          <ImageUp size={15} />
+    <section className="settings-card channel-logos-layout">
+      <div className="settings-card-head">
+        <span className="settings-symbol">
+          <ImageUp size={14} />
         </span>
-        <div>
-          <h2>Logo kanal marketplace</h2>
-          <p>
-            Satu logo per kanal — tampil otomatis di semua halaman yang memakai nama kanal.
-          </p>
+        <div className="settings-card-text">
+          <h2 className="settings-card-title">Logo kanal</h2>
+          <p className="settings-card-desc">Satu logo per kanal — tampil otomatis di semua halaman yang memakai nama kanal.</p>
         </div>
       </div>
 
       {stores.isLoading || logos.isLoading ? (
-        <State type="loading" />
+        <div className="settings-state">
+          <State type="loading" />
+        </div>
       ) : stores.isError || logos.isError ? (
-        <State
-          type="error"
-          onRetry={() => {
-            stores.refetch();
-            logos.refetch();
-          }}
-        />
+        <div className="settings-state">
+          <State type="error" onRetry={() => { stores.refetch(); logos.refetch(); }} />
+        </div>
       ) : channels.size === 0 ? (
-        <div className="state">
-          <ImageUp size={24} />
-          <strong>Belum ada kanal</strong>
-          <span>
-            Kanal diambil dari daftar toko — tambahkan toko dengan kanal (Shopee, TikTok Shop,
-            dan lainnya) di menu Toko, lalu logo bisa diunggah di sini.
-          </span>
+        <div className="settings-state-empty">
+          <ImageUp size={22} />
+          <div>
+            <strong>Belum ada kanal</strong>
+            <p>
+              Tambahkan toko dengan kanal (Shopee, TikTok Shop, dan lain-lain) di menu Toko,
+              lalu logo akan bisa diunggah di sini.
+            </p>
+          </div>
         </div>
       ) : (
-        <div className="channel-logo-list">
+        <div className="channel-logos-list">
           {[...channels.entries()].map(([key, name]) => {
             const current =
               logos.data?.logos.find((logo) => logo.channelKey === key)?.logoUrl ?? null;
             return (
               <div className="channel-logo-row" key={key}>
                 <ChannelAvatar channel={name} className="channel-logo-preview" />
-                <span className="channel-logo-name">{name}</span>
-                <Badge tone={current ? 'good' : 'neutral'}>
-                  {current ? 'Logo aktif' : 'Pakai SVG/inisial'}
-                </Badge>
-                <label className="channel-logo-upload" title={`Ganti logo ${name}`}>
-                  <input
-                    type="file"
-                    accept="image/png, image/jpeg, image/webp"
-                    disabled={isDemo || busyChannel === key}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      event.target.value = '';
-                      void handleFile(name, file);
-                    }}
-                  />
-                  {current ? 'Ganti' : 'Upload'}
-                </label>
-                {current && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="channel-logo-delete"
-                    disabled={isDemo || remove.isPending}
-                    aria-label={`Hapus logo kanal ${name}`}
-                    onClick={() => remove.mutate({ channel: name })}
+                <div className="channel-logo-info">
+                  <div className="channel-logo-meta">
+                    <span className="channel-logo-name">{name}</span>
+                    <Badge tone={current ? 'good' : 'neutral'}>
+                      {current ? 'Logo aktif' : 'Pakai SVG/inisial'}
+                    </Badge>
+                  </div>
+                  <p className="channel-logo-desc">
+                    {current
+                      ? 'Logo ini akan tampil di semua halaman yang memakai nama kanal.'
+                      : 'Upload logo untuk kanal ini — tampil otomatis di semua halaman.'}
+                  </p>
+                </div>
+                <div className="channel-logo-actions">
+                  <label
+                    className={`channel-logo-upload ${busyChannel === key ? 'busy' : ''}`}
+                    title={`Ganti logo ${name}`}
                   >
-                    <Trash2 size={13} /> Hapus
-                  </Button>
-                )}
+                    <input
+                      type="file"
+                      accept="image/png, image/jpeg, image/webp"
+                      disabled={isDemo || busyChannel === key}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = '';
+                        void handleFile(name, file);
+                      }}
+                    />
+                    {busyChannel === key ? (
+                      <>
+                        <RefreshCw size={12} className="rotate-cw" /> Uploading…
+                      </>
+                    ) : current ? (
+                      <>
+                        <ImageUp size={12} /> Ganti
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={12} /> Upload
+                      </>
+                    )}
+                  </label>
+                  {current && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="compact"
+                      disabled={isDemo || remove.isPending}
+                      aria-label={`Hapus logo kanal ${name}`}
+                      onClick={() => remove.mutate({ channel: name })}
+                    >
+                      <Trash2 size={12} /> Hapus
+                    </Button>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -432,7 +361,7 @@ export function ChannelLogos({ isDemo }: { isDemo: boolean }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Modul (dipindah ke /pengaturan/modul)                               */
+/* Modul                                                             */
 /* ------------------------------------------------------------------ */
 
 export function ModulesGrid() {
@@ -443,8 +372,6 @@ export function ModulesGrid() {
   const readOnly = session.isLoading || isDemo;
   const isOwner = session.data?.role === 'owner';
 
-  // Tunggu sesi selesai dulu — tanpa ini owner sempat melihat
-  // layar "Khusus owner" sesaat saat data sesi masih dimuat.
   if (session.isLoading) {
     return (
       <Panel>
@@ -455,18 +382,20 @@ export function ModulesGrid() {
 
   if (!isOwner) {
     return (
-      <Panel>
-        <div className="state">
-          <LockKeyhole size={24} />
-          <strong>Khusus owner</strong>
-          <span>Modul hanya bisa dikontrol akun owner. Hubungi pemilik workspace bila perlu perubahan.</span>
+      <section className="settings-card settings-card--state">
+        <div className="settings-state-locked">
+          <LockKeyhole size={22} />
+          <div>
+            <strong>Khusus owner</strong>
+            <p>Modul hanya bisa dikontrol akun owner. Hubungi pemilik workspace bila perlu perubahan.</p>
+          </div>
         </div>
-      </Panel>
+      </section>
     );
   }
 
   return (
-    <div className="settings-grid">
+    <div className="settings-card-list">
       {modules.isLoading ? (
         <Panel>
           <State type="loading" />
@@ -483,18 +412,23 @@ export function ModulesGrid() {
         modules.data.map((module) => {
           const disabled = module.isCore || readOnly || update.isPending;
           return (
-            <Panel className="module-card" key={module.key}>
-              <div className="module-card-head">
-                <div>
-                  <span className="module-kicker">{module.key.replaceAll('_', ' ')}</span>
-                  <h2>{module.label}</h2>
+            <section className="settings-card" key={module.key}>
+              <div className="settings-card-head">
+                <span className="settings-symbol">
+                  {module.isCore ? <LockKeyhole size={13} /> : <Settings2 size={13} />}
+                </span>
+                <div className="settings-card-text">
+                  <span className="module-kicker">
+                    {module.key.replaceAll('_', ' ')}
+                  </span>
+                  <h2 className="settings-card-title">{module.label}</h2>
                 </div>
                 <Badge tone={module.isEnabled ? 'good' : 'neutral'}>
                   {module.isEnabled ? 'Aktif' : 'Nonaktif'}
                 </Badge>
               </div>
-              <p>{module.description}</p>
-              <div className="module-card-foot">
+              <p className="settings-card-desc module-desc">{module.description}</p>
+              <div className="settings-card-foot">
                 {module.isCore ? (
                   <span className="module-locked">
                     <LockKeyhole size={13} /> Modul inti
@@ -517,7 +451,7 @@ export function ModulesGrid() {
                   {module.isEnabled ? 'Matikan' : 'Nyalakan'}
                 </button>
               </div>
-            </Panel>
+            </section>
           );
         })
       )}
@@ -526,7 +460,7 @@ export function ModulesGrid() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Pengguna workspace (owner saja, /pengaturan/pengguna)               */
+/* Pengguna workspace                                                */
 /* ------------------------------------------------------------------ */
 
 export function WorkspaceUsersSection() {
@@ -542,13 +476,15 @@ export function WorkspaceUsersSection() {
 
   if (session.data?.role !== 'owner') {
     return (
-      <Panel>
-        <div className="state">
-          <LockKeyhole size={24} />
-          <strong>Khusus owner</strong>
-          <span>Daftar & tambah pengguna hanya bisa oleh akun owner.</span>
+      <section className="settings-card settings-card--state">
+        <div className="settings-state-locked">
+          <LockKeyhole size={22} />
+          <div>
+            <strong>Khusus owner</strong>
+            <p>Daftar & tambah pengguna hanya bisa oleh akun owner.</p>
+          </div>
         </div>
-      </Panel>
+      </section>
     );
   }
 
@@ -579,16 +515,30 @@ function WorkspaceUsers() {
   };
 
   return (
-    <Panel className="workspace-users">
+    <section className="settings-card">
+      <div className="settings-card-head">
+        <span className="settings-symbol">
+          <UsersRound size={14} />
+        </span>
+        <div className="settings-card-text">
+          <h2 className="settings-card-title">Pengguna workspace</h2>
+          <p className="settings-card-desc">Daftar staf & tambah user baru dengan role yang jelas.</p>
+        </div>
+      </div>
+
       {users.isLoading ? (
-        <State type="loading" />
+        <div className="settings-state">
+          <State type="loading" />
+        </div>
       ) : users.isError ? (
-        <State type="error" onRetry={() => users.refetch()} />
+        <div className="settings-state">
+          <State type="error" onRetry={() => users.refetch()} />
+        </div>
       ) : (
         <>
           <ul className="workspace-user-list" data-testid="list-workspace-users">
             {users.data?.map((user) => (
-              <li key={user.id}>
+              <li key={user.id} className="workspace-user-row">
                 {user.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img className="workspace-user-avatar" src={user.imageUrl} alt="" />
@@ -613,43 +563,49 @@ function WorkspaceUsers() {
             ))}
           </ul>
 
-          <form className="account-form" onSubmit={submit}>
-            <Field label="Email">
-              <input
-                type="email"
-                required
-                placeholder="staf@gmail.com"
-                value={form.email}
-                onChange={(event) => setForm({ ...form, email: event.target.value })}
-              />
-            </Field>
-            <Field label="Nama">
-              <input
-                type="text"
-                required
-                placeholder="Nama staf"
-                value={form.name}
-                onChange={(event) => setForm({ ...form, name: event.target.value })}
-              />
-            </Field>
-            <Field label="Password awal" hint="Minimal 8 karakter — minta user ganti sendiri nanti.">
-              <PasswordInput
-                required
-                minLength={8}
-                autoComplete="new-password"
-                value={form.password}
-                onChange={(event) => setForm({ ...form, password: event.target.value })}
-              />
-            </Field>
-            <Field label="Role">
-              <select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>
-                <option value="pengguna">Pengguna — kelola data, tanpa Pengaturan</option>
-                <option value="owner">Owner — akses penuh</option>
-                <option value="demo">Demo — hanya lihat</option>
-              </select>
-            </Field>
-            <div className="account-actions">
-              {error && <span className="account-error">{error}</span>}
+          <form className="settings-form" onSubmit={submit}>
+            <div className="settings-form-grid">
+              <Field label="Email">
+                <input
+                  type="email"
+                  required
+                  placeholder="staf@gmail.com"
+                  value={form.email}
+                  onChange={(event) => setForm({ ...form, email: event.target.value })}
+                />
+              </Field>
+              <Field label="Nama">
+                <input
+                  type="text"
+                  required
+                  placeholder="Nama staf"
+                  value={form.name}
+                  onChange={(event) => setForm({ ...form, name: event.target.value })}
+                />
+              </Field>
+              <Field label="Password awal" hint="Minimal 8 karakter — minta user ganti sendiri nanti.">
+                <PasswordInput
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  value={form.password}
+                  onChange={(event) => setForm({ ...form, password: event.target.value })}
+                />
+              </Field>
+              <Field label="Role">
+                <select
+                  value={form.role}
+                  onChange={(event) => setForm({ ...form, role: event.target.value })}
+                >
+                  <option value="pengguna">Pengguna — kelola data, tanpa Pengaturan</option>
+                  <option value="owner">Owner — akses penuh</option>
+                  <option value="demo">Demo — hanya lihat</option>
+                </select>
+              </Field>
+            </div>
+
+            <div className="settings-form-actions">
+              {error && <span className="settings-form-error">{error}</span>}
               <Button type="submit" disabled={create.isPending}>
                 {create.isPending ? 'Menyimpan…' : 'Tambah user'}
               </Button>
@@ -657,7 +613,7 @@ function WorkspaceUsers() {
           </form>
         </>
       )}
-    </Panel>
+    </section>
   );
 }
 
@@ -665,7 +621,7 @@ function WorkspaceUsers() {
 export function RoleNotice({ isDemo }: { isDemo: boolean }) {
   if (!isDemo) return null;
   return (
-    <div className="settings-note settings-note-inline">
+    <div className="settings-note">
       <LockKeyhole size={15} /> Mode demo hanya bisa melihat
     </div>
   );
