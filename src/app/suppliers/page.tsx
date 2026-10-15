@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { MessageCircle, Pencil, Plus, Power, Trash2, Truck } from 'lucide-react';
+import { Boxes, ChevronRight, MessageCircle, Pencil, Plus, Power, Trash2, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   uploadImage,
@@ -245,19 +245,32 @@ export default function SuppliersPage() {
                           ) : (
                             <span className="muted">Belum ada produk</span>
                           )}
-                          {supplier.productCount > supplier.products.length && (
+                          {/* Tombol, bukan teks biasa — supaya jelas baris ini bisa dibuka. */}
+                          {supplier.productCount > 0 && (
                             <Link
                               href={`/suppliers/${supplier.id}`}
-                              className="table-link"
+                              className="btn btn-secondary btn-compact"
                               data-testid={`link-supplier-more-${supplier.id}`}
                             >
-                              Lihat semua {number(supplier.productCount)} produk →
+                              <Boxes size={14} />
+                              {supplier.productCount > supplier.products.length
+                                ? `Lihat semua ${number(supplier.productCount)} produk`
+                                : 'Buka daftar produk'}
                             </Link>
                           )}
                         </div>
                       </td>
                       <td>
                         <div className="button-pair table-actions">
+                          <Link
+                            href={`/suppliers/${supplier.id}`}
+                            className="icon-btn"
+                            aria-label="Buka daftar produk suplier"
+                            title="Buka daftar produk suplier"
+                            data-testid={`button-open-supplier-${supplier.id}`}
+                          >
+                            <ChevronRight size={16} />
+                          </Link>
                           <button
                             className="icon-btn"
                             onClick={() => toggleActive(supplier)}

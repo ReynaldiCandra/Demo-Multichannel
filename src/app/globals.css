@@ -499,6 +499,18 @@ h2 { font: 700 16px/1.2 var(--app-font-serif); letter-spacing: -.02em; }
 .supplier-state .state strong { font-size: 12px; }
 .supplier-state .state span { max-width: 260px; }
 .supplier-state .state .btn { min-height: 32px; }
+/* Tabel suplier: beri napas antar kolom. Kolom pertama/terakhir disejajarkan
+   dengan padding .section-head (22px), header tidak menempel garis atas panel,
+   dan kolom centang tidak lagi rapat dengan nama suplier. */
+.supplier-panel .table-scroll table { min-width: 720px; }
+.supplier-panel .table-scroll th { padding: 16px 14px 12px; }
+.supplier-panel .table-scroll td { padding: 18px 14px; vertical-align: top; }
+.supplier-panel .table-scroll th:first-child, .supplier-panel .table-scroll td:first-child { padding-left: 22px; }
+.supplier-panel .table-scroll th:last-child, .supplier-panel .table-scroll td:last-child { padding-right: 22px; }
+.supplier-panel .bulk-col { width: 46px; }
+.supplier-panel .table-scroll th.bulk-col, .supplier-panel .table-scroll td.bulk-col { padding-right: 14px; }
+/* Tombol "buka daftar produk" jangan melar selebar sel (list-nya grid). */
+.supplier-product-list > .btn { justify-self: start; }
 .section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
 .text-link, .table-link, .back-link { color: hsl(169 43% 37%); text-decoration: none; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; gap: 3px; }
 .text-link:hover, .table-link:hover, .back-link:hover { text-decoration: underline; }
