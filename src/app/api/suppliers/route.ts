@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
-import { db, productsTable, salesTable, storesTable, suppliersTable } from '@/lib/db';
+import { and, asc, eq, inArray } from 'drizzle-orm';
+import { db, productsTable, storesTable, suppliersTable } from '@/lib/db';
 import { badRequest, handler, parseBody } from '@/lib/server/http';
+import {
+  SUPPLIER_TOP_PRODUCTS,
+  getSupplierProductStats,
+  summarizeSupplierProducts,
+} from '@/lib/server/suppliers';
 import { requireWorkspace, requireWorkspaceWrite, isResponse } from '@/lib/server/workspace';
 import { BulkActiveInput, BulkIdsInput, SupplierInput } from '@/lib/server/validation';
 
@@ -19,59 +24,20 @@ export const GET = handler(async () => {
     .where(eq(suppliersTable.workspaceId, ctx.workspaceId))
     .orderBy(asc(suppliersTable.name));
 
-  const productRows = await db
-    .select({
-      productId: productsTable.id,
-      productName: productsTable.name,
-      imageUrl: productsTable.imageUrl,
-      supplierId: productsTable.supplierId,
-      totalSold: sql<string>`coalesce(sum(case when ${salesTable.status} = 'selesai' then ${salesTable.qty} else 0 end), 0)`,
-      transactionCount: sql<string>`count(case when ${salesTable.status} = 'selesai' then ${salesTable.id} end)`,
-      revenue: sql<string>`coalesce(sum(case when ${salesTable.status} = 'selesai' then ${salesTable.qty} * ${salesTable.actualPrice} - ${salesTable.discount} else 0 end), 0)`,
-    })
-    .from(productsTable)
-    .innerJoin(storesTable, eq(productsTable.storeId, storesTable.id))
-    .leftJoin(salesTable, eq(salesTable.productId, productsTable.id))
-    .where(
-      and(
-        sql`${productsTable.supplierId} is not null`,
-        // Tenant: hanya produk milik workspace ini.
-        eq(storesTable.workspaceId, ctx.workspaceId),
-      ),
-    )
-    .groupBy(productsTable.id)
-    .orderBy(asc(productsTable.name));
-
-  const productsBySupplier = new Map<string, Array<{
-    id: string;
-    name: string;
-    imageUrl: string | null;
-    totalSold: number;
-    transactionCount: number;
-    revenue: number;
-  }>>();
-
-  for (const row of productRows) {
-    if (!row.supplierId || !row.productName || !row.productId) continue;
-    const current = productsBySupplier.get(row.supplierId) ?? [];
-    if (row.productId && row.productName) {
-      current.push({
-        id: row.productId,
-        name: row.productName,
-        imageUrl: row.imageUrl,
-        totalSold: Number(row.totalSold) || 0,
-        transactionCount: Number(row.transactionCount) || 0,
-        revenue: Number(row.revenue) || 0,
-      });
-    }
-    productsBySupplier.set(row.supplierId, current);
-  }
+  // Satu suplier bisa punya puluhan produk: daftar hanya mengirim ringkasan +
+  // beberapa produk terlaris. Seluruh produk satu suplier diambil lewat
+  // GET /api/suppliers/[supplierId].
+  const productsBySupplier = await getSupplierProductStats(ctx.workspaceId);
 
   return NextResponse.json(
-    supplierRows.map((supplier) => ({
-      ...supplier,
-      products: productsBySupplier.get(supplier.id) ?? [],
-    })),
+    supplierRows.map((supplier) => {
+      const products = productsBySupplier.get(supplier.id) ?? [];
+      return {
+        ...supplier,
+        ...summarizeSupplierProducts(products),
+        products: products.slice(0, SUPPLIER_TOP_PRODUCTS),
+      };
+    }),
   );
 });
 
@@ -86,7 +52,20 @@ export const POST = handler(async (request: Request) => {
     .insert(suppliersTable)
     .values({ ...parsed.data, workspaceId: ctx.workspaceId })
     .returning();
-  return NextResponse.json({ ...supplier, products: [] }, { status: 201 });
+
+  // Suplier baru belum punya produk, jadi ringkasannya nol — bentuknya tetap
+  // sama dengan response GET supaya pemanggil tidak perlu tahu bedanya.
+  return NextResponse.json(
+    {
+      ...supplier,
+      productCount: 0,
+      totalSold: 0,
+      transactionCount: 0,
+      revenue: 0,
+      products: [],
+    },
+    { status: 201 },
+  );
 });
 
 /** POST /api/suppliers/bulk-delete — hapus massal suplier milik workspace. */

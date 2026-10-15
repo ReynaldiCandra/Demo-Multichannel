@@ -114,6 +114,7 @@ describe('Isolasi multi-tenant: workspace A tidak menyentuh data workspace B', (
       ['/api/invoices/B', (await import('@/app/api/invoices/[invoiceId]/route')).GET(jsonRequest('/x', 'GET'), routeCtx({ invoiceId: invoiceB.id }))],
       ['/api/tasks/B', (await import('@/app/api/tasks/[taskId]/route')).PATCH(jsonRequest('/x', 'PATCH', { title: 'bajak' }), routeCtx({ taskId: taskB.id }))],
       ['/api/suppliers/B', (await import('@/app/api/suppliers/[supplierId]/route')).PATCH(jsonRequest('/x', 'PATCH', { name: 'Bajak' }), routeCtx({ supplierId: supplierB.id }))],
+      ['/api/suppliers/B (detail)', (await import('@/app/api/suppliers/[supplierId]/route')).GET(jsonRequest('/x', 'GET'), routeCtx({ supplierId: supplierB.id }))],
       ['/api/crm/clients/B', (await import('@/app/api/crm/clients/[clientId]/route')).PATCH(jsonRequest('/x', 'PATCH', { name: 'Bajak' }), routeCtx({ clientId: clientB.id }))],
       ['/api/meta-ads/B', (await import('@/app/api/meta-ads/[metaAdTestId]/route')).PATCH(jsonRequest('/x', 'PATCH', { productName: 'Bajak' }), routeCtx({ metaAdTestId: metaB.id }))],
     ];

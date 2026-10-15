@@ -29,6 +29,7 @@ import type {
   TaskRow,
   StoreRow,
   Supplier,
+  SupplierRow,
   CrmAlertsResponse,
   CrmClientRow,
   CrmLeadsResponse,
@@ -162,6 +163,7 @@ export const getListJobsQueryKey = (params?: { status?: string; attentionOnly?: 
 export const getGetJobQueryKey = (jobId: string) => ['jobs', jobId] as const;
 export const getListHostsQueryKey = () => ['hosts'] as const;
 export const getListSuppliersQueryKey = () => ['suppliers'] as const;
+export const getGetSupplierQueryKey = (supplierId: string) => ['suppliers', supplierId] as const;
 export const getListLiveSessionsQueryKey = (params?: { period?: string }) =>
   ['live-sessions', params ?? {}] as const;
 export const getListLedgerQueryKey = () => ['ledger'] as const;
@@ -409,6 +411,20 @@ export function useListSuppliers(options: { enabled?: boolean } = {}) {
     queryKey: getListSuppliersQueryKey(),
     queryFn: ({ signal }) => request<Supplier[]>('/suppliers', { signal }),
     enabled: options.enabled ?? true,
+  });
+}
+
+/**
+ * Detail satu suplier + seluruh produknya.
+ *
+ * Query key-nya berprefix ['suppliers'] supaya mutasi supplier yang sudah ada
+ * (create/update/bulk) tetap meng-invalidate cache halaman detail ini.
+ */
+export function useGetSupplier(supplierId: string) {
+  return useQuery({
+    queryKey: getGetSupplierQueryKey(supplierId),
+    queryFn: ({ signal }) => request<Supplier>(`/suppliers/${supplierId}`, { signal }),
+    enabled: Boolean(supplierId),
   });
 }
 
@@ -776,10 +792,10 @@ export function useCreateSupplier(options?: MutationOpts<Supplier, { data: unkno
 }
 
 export function useUpdateSupplier(
-  options?: MutationOpts<Supplier, { supplierId: string; data: unknown }>,
+  options?: MutationOpts<SupplierRow, { supplierId: string; data: unknown }>,
 ) {
   return useInvalidating(
-    ({ supplierId, data }) =>      request<Supplier>(`/suppliers/${supplierId}`, { method: 'PATCH', body: data }),
+    ({ supplierId, data }) =>      request<SupplierRow>(`/suppliers/${supplierId}`, { method: 'PATCH', body: data }),
     ['suppliers', 'products'],
     options,
     { kind: 'updated', message: 'Suplier diperbarui' },

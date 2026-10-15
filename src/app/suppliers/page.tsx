@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { MessageCircle, Pencil, Plus, Power, Trash2, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -176,7 +177,13 @@ export default function SuppliersPage() {
                         />
                       </td>
                       <td>
-                        <strong>{supplier.name}</strong>
+                        <Link
+                          href={`/suppliers/${supplier.id}`}
+                          className="table-link"
+                          data-testid={`link-supplier-${supplier.id}`}
+                        >
+                          <strong>{supplier.name}</strong>
+                        </Link>
                         {!supplier.isActive && (
                           <>
                             {' '}
@@ -204,16 +211,26 @@ export default function SuppliersPage() {
                       <td>{supplier.category || <span className="muted">—</span>}</td>
                       <td>{supplier.city || <span className="muted">—</span>}</td>
                       <td>
-                        {supplier.products?.length ? (
-                          <div className="supplier-product-list">
-                            {supplier.products.map((product) => (
+                        <div className="supplier-product-list">
+                          {/*
+                           * Suplier bisa punya puluhan produk, jadi baris ini
+                           * hanya menampilkan ringkasan + beberapa produk
+                           * terlaris (API sudah memotongnya). Produk lengkap
+                           * dibuka di halaman detail suplier.
+                           */}
+                          <small className="table-sub mono">
+                            {number(supplier.productCount)} produk ·{' '}
+                            {number(supplier.totalSold)} pcs · {money(supplier.revenue)}
+                          </small>
+                          {supplier.products?.length ? (
+                            supplier.products.map((product) => (
                               <div className="supplier-product" key={product.id}>
                                 {product.imageUrl ? (
-                                   <ImagePreviewButton
-                                     src={product.imageUrl}
-                                     alt={`Foto ${product.name}`}
-                                     size="small"
-                                   />
+                                  <ImagePreviewButton
+                                    src={product.imageUrl}
+                                    alt={`Foto ${product.name}`}
+                                    size="small"
+                                  />
                                 ) : (
                                   <span className="product-thumb product-thumb-empty">—</span>
                                 )}
@@ -224,11 +241,20 @@ export default function SuppliersPage() {
                                   </small>
                                 </span>
                               </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="muted">Belum ada produk</span>
-                        )}
+                            ))
+                          ) : (
+                            <span className="muted">Belum ada produk</span>
+                          )}
+                          {supplier.productCount > supplier.products.length && (
+                            <Link
+                              href={`/suppliers/${supplier.id}`}
+                              className="table-link"
+                              data-testid={`link-supplier-more-${supplier.id}`}
+                            >
+                              Lihat semua {number(supplier.productCount)} produk →
+                            </Link>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <div className="button-pair table-actions">

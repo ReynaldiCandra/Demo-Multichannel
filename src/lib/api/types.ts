@@ -225,7 +225,8 @@ export type Host = {
   isActive: boolean;
 };
 
-export type Supplier = {
+/** Kolom dasar suplier — bentuk response POST/PATCH (tanpa angka turunan). */
+export type SupplierRow = {
   id: string;
   name: string;
   whatsapp: string | null;
@@ -234,8 +235,32 @@ export type Supplier = {
   imageUrl: string | null;
   isActive: boolean;
   createdAt: string;
-  products: SupplierProduct[];
 };
+
+/**
+ * Angka turunan suplier: dihitung dari penjualan berstatus "selesai" saja.
+ * Hanya endpoint GET yang menghitungnya; POST/PATCH tidak (tidak perlu query
+ * agregat tambahan hanya untuk membalas tulis data).
+ */
+export type SupplierSummary = {
+  /** Jumlah SELURUH produk suplier — bukan panjang `products` yang dipotong. */
+  productCount: number;
+  /** Total pcs terjual & omzet seluruh produknya. */
+  totalSold: number;
+  transactionCount: number;
+  revenue: number;
+};
+
+/**
+ * Suplier + ringkasan penjualan + produknya.
+ *
+ * - GET /api/suppliers: `products` dipotong ke 3 terlaris.
+ * - GET /api/suppliers/[supplierId]: `products` lengkap.
+ * - POST /api/suppliers: suplier baru, jadi ringkasannya nol dan `products` kosong.
+ *
+ * PATCH tidak membalas bentuk ini — pakai `SupplierRow` (lihat useUpdateSupplier).
+ */
+export type Supplier = SupplierRow & SupplierSummary & { products: SupplierProduct[] };
 
 export type SupplierProduct = {
   id: string;

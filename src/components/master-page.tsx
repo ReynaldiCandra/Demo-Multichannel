@@ -37,7 +37,18 @@ const PRODUCT_SORTS: Array<{ value: ProductSort; label: string }> = [
 ];
 const PAGE_SIZE = 10;
 
-export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
+export function MasterPage({
+  kind,
+  /**
+   * Filter suplier awal (dari `?supplierId=` di URL). Halaman detail suplier
+   * menautkan ke sini supaya produk satu suplier langsung tersaring; "none"
+   * berarti produk yang belum punya suplier.
+   */
+  initialSupplierId,
+}: {
+  kind: 'products' | 'stores';
+  initialSupplierId?: string;
+}) {
   const isProducts = kind === 'products';
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Editing>(null);
@@ -48,6 +59,7 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
   const [selectedMarketplace, setSelectedMarketplace] = useState('');
   const [selectedStoreId, setSelectedStoreId] = useState('');
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
+  const [supplierFilter, setSupplierFilter] = useState(initialSupplierId || 'all');
   const [newStoreOpen, setNewStoreOpen] = useState(false);
   const [newStoreKind, setNewStoreKind] = useState<NewStoreKind>('store');
   const [page, setPage] = useState(1);
@@ -142,9 +154,14 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
     [storeItems],
   );
   const visibleProducts = useMemo(() => {
-    const rows = productItems.filter((item) =>
-      productStatus === 'all' ? true : productStatus === 'active' ? item.isActive : !item.isActive,
-    );
+    const rows = productItems.filter((item) => {
+      const statusMatch =
+        productStatus === 'all' ? true : productStatus === 'active' ? item.isActive : !item.isActive;
+      if (!statusMatch) return false;
+      if (supplierFilter === 'all') return true;
+      if (supplierFilter === 'none') return !item.supplierId;
+      return item.supplierId === supplierFilter;
+    });
     return [...rows].sort((a, b) => {
       if (productSort === 'sold') return b.totalSold - a.totalSold || a.name.localeCompare(b.name);
       if (productSort === 'profit') return b.profit - a.profit || a.name.localeCompare(b.name);
@@ -157,7 +174,7 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
       }
       return a.name.localeCompare(b.name);
     });
-  }, [productItems, productSort, productStatus]);
+  }, [productItems, productSort, productStatus, supplierFilter]);
   const visibleStores = useMemo(
     () => storeItems.filter((store) => channelFilter === 'all' || store.channel === channelFilter),
     [storeItems, channelFilter],
@@ -321,6 +338,30 @@ export function MasterPage({ kind }: { kind: 'products' | 'stores' }) {
               {PRODUCT_SORTS.map((item) => (
                 <option key={item.value} value={item.value}>
                   {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {/*
+           * Filter per suplier. Jumlah produk ikut ditampilkan supaya jelas
+           * suplier mana yang punya banyak produk — angka itu dihitung server
+           * di GET /api/suppliers (tidak perlu menghitung ulang di sini).
+           */}
+          <label className="sort-control">
+            <span>Suplier</span>
+            <select
+              value={supplierFilter}
+              onChange={(event) => {
+                setSupplierFilter(event.target.value);
+                setPage(1);
+              }}
+              data-testid="select-product-supplier-filter"
+            >
+              <option value="all">Semua suplier</option>
+              <option value="none">Tanpa suplier</option>
+              {(suppliers.data ?? []).map((supplier) => (
+                <option key={supplier.id} value={supplier.id}>
+                  {supplier.name} ({number(supplier.productCount)})
                 </option>
               ))}
             </select>
