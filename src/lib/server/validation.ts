@@ -41,7 +41,13 @@ export const BulkActiveInput = BulkIdsInput.extend({
  */
 export const MeUpdateInput = z
   .object({
-    name: z.string().trim().min(1, 'Nama wajib diisi').max(80),
+    /**
+     * Opsional: halaman Profil memakai endpoint ini untuk dua aksi terpisah —
+     * ganti/hapus foto mengirim `{ imageUrl }` saja, dan form nama mengirim
+     * `{ name }` saja. Kalau `name` diwajibkan, unggah foto ditolak 400
+     * "Data tidak valid" walau uploadnya sendiri berhasil.
+     */
+    name: z.string().trim().min(1, 'Nama wajib diisi').max(80).optional(),
     /** Foto profil (URL hasil upload Vercel Blob kind=profile). */
     imageUrl: z.string().url('URL foto tidak valid').nullable().optional(),
   })
