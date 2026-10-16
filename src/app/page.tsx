@@ -287,20 +287,22 @@ function TopProductsCard({
           {products.map((product, index) => (
             <div className="top-product-row" key={product.productId}>
               <span className="store-rank">{String(index + 1).padStart(2, '0')}</span>
-              {product.imageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={product.imageUrl}
-                  alt={product.productName}
-                  className="top-product-image"
-                  loading="lazy"
-                />
-              )}
-              <div className="top-product-copy">
-                <strong>{product.productName}</strong>
-                <small>
-                  {product.storeName} · {product.channel} · {number(product.pcs)} pcs
-                </small>
+              <div className="top-product-main">
+                {product.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={product.imageUrl}
+                    alt={product.productName}
+                    className="top-product-image"
+                    loading="lazy"
+                  />
+                )}
+                <div className="top-product-copy">
+                  <strong>{product.productName}</strong>
+                  <small>
+                    {product.storeName} · {product.channel} · {number(product.pcs)} pcs
+                  </small>
+                </div>
               </div>
               <div className="top-product-value">
                 <strong>{money(product.profit)}</strong>
