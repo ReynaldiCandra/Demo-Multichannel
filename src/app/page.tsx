@@ -172,28 +172,39 @@ export default function DashboardPage() {
               </div>
               {brands.some((brand) => brand.revenue > 0) ? (
                 <div className="store-performance-list">
-                  {brands.slice(0, 5).map((brand, index) => (
-                    <Link
-                      className="store-performance-row store-link"
-                      key={brand.brand}
-                      href={`/toko?month=${month}&brand=${encodeURIComponent(brand.brand)}`}
-                      data-testid={`row-brand-performance-${index}`}
-                    >
-                      <div className="store-performance-title">
-                        <span className="store-rank">{String(index + 1).padStart(2, '0')}</span>
-                        <div>
-                          <strong>{brand.brand}</strong>
-                          <small>
-                            {number(brand.channels)} kanal · {number(brand.orders)} unit
-                          </small>
+                  {brands.slice(0, 5).map((brand, index) => {
+                    // Cari channel dan image dari stores untuk brand ini
+                    const storeForBrand = channels.find(
+                      (s) => s.storeName === brand.brand,
+                    );
+                    return (
+                      <Link
+                        className="store-performance-row store-link"
+                        key={brand.brand}
+                        href={`/toko?month=${month}&brand=${encodeURIComponent(brand.brand)}`}
+                        data-testid={`row-brand-performance-${index}`}
+                      >
+                        <ChannelAvatar
+                          channel={storeForBrand?.channel ?? brand.brand}
+                          image={storeForBrand?.storeImage ?? undefined}
+                          className="brand-avatar"
+                        />
+                        <div className="store-performance-title">
+                          <span className="store-rank">{String(index + 1).padStart(2, '0')}</span>
+                          <div>
+                            <strong>{brand.brand}</strong>
+                            <small>
+                              {number(brand.channels)} kanal · {number(brand.orders)} unit
+                            </small>
+                          </div>
                         </div>
-                      </div>
-                      <div className="performance-bar">
-                        <span style={{ width: `${Math.max(5, brand.revenueShare)}%` }} />
-                      </div>
-                      <strong className="mono">{money(brand.profit)}</strong>
-                    </Link>
-                  ))}
+                        <div className="performance-bar">
+                          <span style={{ width: `${Math.max(5, brand.revenueShare)}%` }} />
+                        </div>
+                        <strong className="mono">{money(brand.profit)}</strong>
+                      </Link>
+                    );
+                  })}
                 </div>
               ) : (
                 <State type="empty" />
@@ -267,6 +278,15 @@ function TopProductsCard({
           {products.map((product, index) => (
             <div className="top-product-row" key={product.productId}>
               <span className="store-rank">{String(index + 1).padStart(2, '0')}</span>
+              {product.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={product.imageUrl}
+                  alt={product.productName}
+                  className="top-product-image"
+                  loading="lazy"
+                />
+              )}
               <div className="top-product-copy">
                 <strong>{product.productName}</strong>
                 <small>

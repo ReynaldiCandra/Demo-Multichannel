@@ -406,6 +406,7 @@ export type StorePerformanceReport = {
   topProducts?: Array<{
     productId: string;
     productName: string;
+    imageUrl: string | null;
     storeName: string;
     channel: string;
     pcs: number;

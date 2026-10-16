@@ -42,6 +42,7 @@ export type StorePerformanceReport = {
   topProducts: Array<{
     productId: string;
     productName: string;
+    imageUrl: string | null;
     storeName: string;
     channel: string;
     pcs: number;
@@ -121,6 +122,7 @@ export async function getStorePerformance(
     .select({
       productId: productsTable.id,
       productName: productsTable.name,
+      imageUrl: productsTable.imageUrl,
       storeName: storesTable.name,
       channel: storesTable.channel,
       pcs: sql<number>`coalesce(sum(${salesTable.qty}), 0)`,
@@ -139,7 +141,7 @@ export async function getStorePerformance(
         workspaceId ? eq(storesTable.workspaceId, workspaceId) : undefined,
       ),
     )
-    .groupBy(productsTable.id, productsTable.name, storesTable.name, storesTable.channel)
+    .groupBy(productsTable.id, productsTable.name, productsTable.imageUrl, storesTable.name, storesTable.channel)
     .orderBy(desc(sql`coalesce(sum(${salesTable.qty}), 0)`), desc(sql`coalesce(sum(${salesTable.qty} * ${salesTable.actualPrice} - ${salesTable.discount} - ${salesTable.qty} * ${salesTable.modalSnapshot} - ${salesTable.platformFee}), 0)`))
     .limit(5);
 
@@ -203,6 +205,7 @@ export async function getStorePerformance(
     return {
       productId: row.productId,
       productName: row.productName,
+      imageUrl: row.imageUrl ?? null,
       storeName: row.storeName,
       channel: row.channel,
       pcs: Number(row.pcs) || 0,
