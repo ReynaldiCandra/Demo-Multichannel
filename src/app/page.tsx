@@ -184,11 +184,20 @@ export default function DashboardPage() {
                         href={`/toko?month=${month}&brand=${encodeURIComponent(brand.brand)}`}
                         data-testid={`row-brand-performance-${index}`}
                       >
-                        <ChannelAvatar
-                          channel={storeForBrand?.channel ?? brand.brand}
-                          image={storeForBrand?.storeImage ?? undefined}
-                          className="brand-avatar"
-                        />
+                        {/* Logo toko — diutamakan dibanding logo kanal/marketplace */}
+                        {storeForBrand?.storeImage ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={storeForBrand.storeImage}
+                            alt={brand.brand}
+                            className="brand-avatar"
+                          />
+                        ) : (
+                          <ChannelAvatar
+                            channel={storeForBrand?.channel ?? brand.brand}
+                            className="brand-avatar"
+                          />
+                        )}
                         <div className="store-performance-title">
                           <span className="store-rank">{String(index + 1).padStart(2, '0')}</span>
                           <div>
