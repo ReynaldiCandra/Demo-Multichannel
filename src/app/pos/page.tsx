@@ -127,6 +127,7 @@ export default function PosPage() {
             <SalesTable
               sales={filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)}
               total={filtered.length}
+              products={products.data}
               onEdit={(sale) => {
                 setEditing(sale);
                 setFormOpen(true);

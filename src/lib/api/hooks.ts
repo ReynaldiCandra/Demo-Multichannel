@@ -36,6 +36,7 @@ import type {
   CrmProductRow,
   WorkspaceUserRow,
   ChannelLogosResponse,
+  ProfitSettingsRow,
 } from './types';
 
 /* ------------------------------------------------------------------ */
@@ -173,6 +174,7 @@ export const getSalesReportQueryKey = (params?: SalesReportParams) =>
 export const getStorePerformanceQueryKey = (params?: { month?: string; until?: string }) =>
   ['store-performance', params ?? {}] as const;
 export const getListChannelLogosQueryKey = () => ['channel-logos'] as const;
+export const getProfitSettingsQueryKey = () => ['profit-settings'] as const;
 
 /* ------------------------------------------------------------------ */
 /* queries                                                             */
@@ -489,6 +491,31 @@ export function useListModules() {
     queryKey: getListModulesQueryKey(),
     queryFn: ({ signal }) => request<AppModule[]>('/modules', { signal }),
   });
+}
+
+/**
+ * Pengaturan kalkulator profit (default target/pcs + margin keamanan).
+ * Di-share ke form produk & Input Harian; jarang berubah jadi boleh nge-cache.
+ */
+export function useProfitSettings() {
+  return useQuery({
+    queryKey: getProfitSettingsQueryKey(),
+    queryFn: ({ signal }) =>
+      request<ProfitSettingsRow>('/profit-settings', { signal }),
+    staleTime: 60_000,
+  });
+}
+
+/** Simpan pengaturan profit (Pengaturan → Profit & Target). */
+export function useUpdateProfitSettings(
+  options?: MutationOpts<unknown, { data: unknown }>,
+) {
+  return useInvalidating(
+    ({ data }) => request<unknown>('/profit-settings', { method: 'PATCH', body: data }),
+    ['profit-settings'],
+    options,
+    { kind: 'updated', message: 'Pengaturan profit disimpan' },
+  );
 }
 
 /* ------------------------------------------------------------------ */

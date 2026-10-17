@@ -1863,3 +1863,141 @@ img.workspace-user-avatar { object-fit: cover; }
     justify-content: flex-start;
   }
 }
+
+/* ================================================================== */
+/* Kalkulator Profit Marketplace — panel live di form produk           */
+/* ================================================================== */
+
+.product-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+  gap: 18px;
+  align-items: start;
+}
+.product-form-fields { display: contents; }
+
+.profit-calc {
+  position: sticky;
+  top: 0;
+  display: grid;
+  gap: 13px;
+  padding: 16px 17px;
+  border-radius: 13px;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+    linear-gradient(135deg, hsl(169 43% 42% / .35), hsl(var(--accent) / .15)) border-box;
+  box-shadow:
+    0 1px 2px hsl(231 28% 16% / .05),
+    0 10px 26px -14px hsl(169 40% 20% / .28);
+}
+.profit-calc.profit-bad {
+  background:
+    linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+    linear-gradient(135deg, hsl(4 69% 54% / .4), hsl(4 69% 54% / .08)) border-box;
+  box-shadow:
+    0 1px 2px hsl(231 28% 16% / .05),
+    0 10px 26px -14px hsl(4 60% 30% / .3);
+}
+.profit-calc-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: hsl(var(--muted-foreground));
+  font: 600 10px var(--app-font-mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.profit-calc-head svg { color: hsl(var(--accent-foreground)); }
+.profit-calc-flag {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font: 700 9px var(--app-font-mono);
+  letter-spacing: .04em;
+}
+.profit-calc-flag.ok { background: hsl(169 43% 47% / .14); color: hsl(169 43% 30%); }
+.profit-calc-flag.bad { background: hsl(4 69% 54% / .12); color: hsl(4 62% 42%); }
+
+.profit-calc-min {
+  display: grid;
+  gap: 3px;
+  padding: 13px 14px;
+  border-radius: 10px;
+  background: hsl(169 43% 47% / .07);
+}
+.profit-bad .profit-calc-min { background: hsl(4 69% 54% / .06); }
+.profit-calc-min-label { color: hsl(var(--muted-foreground)); font-size: 10px; font-weight: 600; }
+.profit-calc-min-value {
+  color: hsl(169 43% 30%);
+  font: 700 clamp(19px, 2.4vw, 24px)/1.1 var(--app-font-mono);
+  letter-spacing: -.05em;
+}
+.profit-bad .profit-calc-min-value { color: hsl(4 62% 42%); }
+.profit-calc-min-value small { font: 600 11px var(--app-font-mono); letter-spacing: 0; opacity: .6; }
+.profit-calc-min-formula {
+  color: hsl(var(--muted-foreground));
+  font: 500 9.5px var(--app-font-mono);
+  letter-spacing: .02em;
+}
+
+.profit-calc-verdict {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.profit-calc-verdict svg { flex-shrink: 0; margin-top: 1px; }
+.profit-calc-verdict.ok {
+  background: hsl(169 43% 47% / .1);
+  color: hsl(169 43% 26%);
+}
+.profit-calc-verdict.bad {
+  background: hsl(4 69% 54% / .09);
+  color: hsl(4 62% 40%);
+}
+.profit-calc-verdict b { font-weight: 800; }
+.profit-calc-idle .profit-calc-empty {
+  color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.55;
+}
+
+/* Warning target profit di modal Input Harian */
+.sale-target-warning {
+  padding: 11px 13px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.sale-target-warning.ok {
+  background: hsl(169 43% 47% / .1);
+  color: hsl(169 43% 26%);
+}
+.sale-target-warning.bad {
+  background: hsl(4 69% 54% / .09);
+  color: hsl(4 62% 40%);
+}
+
+.target-cell { white-space: nowrap; text-align: center; }
+.target-cell .badge { font-size: 9px; }
+.product-target-modal p { margin: 0 0 10px; font-size: 12px; line-height: 1.5; }
+.product-target-modal p strong { font-size: 13px; }
+
+/* Halaman Pengaturan → Profit & target */
+.profit-settings-card { display: grid; gap: 16px; }
+.profit-settings-card .settings-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 760px) {
+  .product-form-grid { grid-template-columns: 1fr; }
+  .profit-calc { position: static; }
+  .profit-settings-card .settings-form-grid { grid-template-columns: 1fr; }
+}

@@ -19,9 +19,42 @@ import {
   uploadStoreImage,
 } from '@/lib/api/hooks';
 import type { ProductRow, StoreRow } from '@/lib/api/types';
-import { Badge, Button, ConfirmDialog, Field, ImagePreviewButton, Modal, Panel, PageTitle, Pagination, State, type ConfirmRequest } from '@/components/ui';
+import { ProductForm } from '@/components/product-form';
+import { useProfitSettings } from '@/lib/api/hooks';
+import { Badge, Button, ConfirmDialog, Field, ImagePreviewButton, Modal, Panel, PageTitle, Pagination, State } from '@/components/ui';
+
+/** Konfirmasi request yang mungkin punya action spesifik (mis. view-target). */
+type ConfirmAction = { action: 'view-target'; product: (
+  | { target: number; mode: 'volume'; minSellingPrice: number; meetsTarget: boolean; meta: string; batchQty: number }
+  | { target: number; mode: 'per_pcs'; minSellingPrice: number; meetsTarget: boolean; meta: string; batchQty?: never }
+) } | { action?: never; product?: never };
+type ConfirmRequestExt = (
+  | { action?: never; product?: never }
+  | ConfirmAction
+) & { message: string; onConfirm: () => void };
+
 import { BulkBar, BulkCheckbox, useBulkSelection } from '@/components/bulk-selection';
 import { money, number } from '@/lib/format';
+import { productTargetStatus } from '@/lib/profit';
+
+/**
+ * Harga jual minimum & status target produk untuk tampil di daftar produk.
+ * Pakai memo supaya tidak menghitung ulang per render; pakai key produk + nilai
+ * yang berubah supaya naik ulang begitu formulir produk disimpan.
+ */
+function productTarget(item: ProductRow, defaultTargetPcs: number, safetyMarginPercent: number) {
+  return productTargetStatus({
+    hpp: item.modal,
+    sellingPrice: item.sellingPrice,
+    feePercent: item.feePercent,
+    mode: item.profitMode,
+    targetProfitPcs: item.targetProfitPcs,
+    targetProfitBatch: item.targetProfitBatch,
+    targetProfitBatchQty: item.targetProfitBatchQty,
+    defaultTargetPcs,
+    safetyMarginPercent,
+  });
+}
 
 type Editing = ProductRow | StoreRow | null;
 type ProductSort = 'name' | 'latest' | 'sold' | 'profit' | 'margin' | 'unsold';
@@ -53,7 +86,7 @@ export function MasterPage({
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Editing>(null);
   const [productSort, setProductSort] = useState<ProductSort>('name');
-  const [confirming, setConfirming] = useState<ConfirmRequest | null>(null);
+  const [confirming, setConfirming] = useState<ConfirmRequestExt | null>(null);
   const [productStatus, setProductStatus] = useState<'all' | 'active' | 'archived'>('all');
   const [channelFilter, setChannelFilter] = useState('all');
   const [selectedMarketplace, setSelectedMarketplace] = useState('');
@@ -67,6 +100,9 @@ export function MasterPage({
   const stores = useListStores();
   const products = useListProducts();
   const suppliers = useListSuppliers({ enabled: isProducts });
+  const profitSettings = useProfitSettings();
+  const defaultTargetPcs = profitSettings.data?.defaultTargetProfitPcs ?? 50000;
+  const safetyMarginPercent = profitSettings.data?.safetyMarginPercent ?? 0;
 
   const close = () => {
     setOpen(false);
@@ -108,6 +144,7 @@ export function MasterPage({
         return;
       }
 
+      const profitMode = (String(form.get('profitMode') || 'per_pcs') as ProductRow['profitMode']);
       const data = {
         storeId: selectedStoreId,
         supplierId: selectedSupplierId || null,
@@ -115,6 +152,15 @@ export function MasterPage({
         modal: Number(form.get('modal')),
         sellingPrice: Number(form.get('sellingPrice')),
         targetMargin: Number(form.get('targetMargin') || 0),
+        // Target profit: kosong = NULL (pakai default global workspace).
+        targetProfitPcs: form.get('targetProfitPcs') ? Number(form.get('targetProfitPcs')) : null,
+        targetProfitBatch: profitMode === 'volume' && form.get('targetProfitBatch')
+          ? Number(form.get('targetProfitBatch'))
+          : null,
+        targetProfitBatchQty: profitMode === 'volume' && form.get('targetProfitBatchQty')
+          ? Number(form.get('targetProfitBatchQty'))
+          : null,
+        profitMode,
         supplierName: editingProduct?.supplierId ? null : editingProduct?.supplierName ?? null,
         supplierPhone: editingProduct?.supplierId ? null : editingProduct?.supplierPhone ?? null,
         imageUrl,
@@ -153,6 +199,7 @@ export function MasterPage({
     () => [...new Set(storeItems.map((store) => store.channel))].sort((a, b) => a.localeCompare(b)),
     [storeItems],
   );
+
   const visibleProducts = useMemo(() => {
     const rows = productItems.filter((item) => {
       const statusMatch =
@@ -162,18 +209,7 @@ export function MasterPage({
       if (supplierFilter === 'none') return !item.supplierId;
       return item.supplierId === supplierFilter;
     });
-    return [...rows].sort((a, b) => {
-      if (productSort === 'sold') return b.totalSold - a.totalSold || a.name.localeCompare(b.name);
-      if (productSort === 'profit') return b.profit - a.profit || a.name.localeCompare(b.name);
-      if (productSort === 'margin') return b.margin - a.margin || a.name.localeCompare(b.name);
-      if (productSort === 'unsold') {
-        return (a.totalSold > 0 ? 1 : 0) - (b.totalSold > 0 ? 1 : 0) || a.name.localeCompare(b.name);
-      }
-      if (productSort === 'latest') {
-        return (b.lastSaleDate ?? '').localeCompare(a.lastSaleDate ?? '') || a.name.localeCompare(b.name);
-      }
-      return a.name.localeCompare(b.name);
-    });
+    return rows;
   }, [productItems, productSort, productStatus, supplierFilter]);
   const visibleStores = useMemo(
     () => storeItems.filter((store) => channelFilter === 'all' || store.channel === channelFilter),
@@ -426,8 +462,10 @@ export function MasterPage({
                       <th>Toko</th>
                       <th>Modal</th>
                       <th>Harga jual</th>
-                      <th>Target margin</th>
-                          <th>Penjualan</th>
+                      <th>Target profit</th>
+                      <th>Harga min.</th>
+                      <th>Status target</th>
+                      <th>Penjualan</th>
                       <th>Status</th>
                       <th />
                     </>
@@ -469,7 +507,23 @@ export function MasterPage({
                         <td className="mono">{money(item.modal)}</td>
                         <td className="mono">{money(item.sellingPrice)}</td>
                         <td className="mono">
-                          {item.targetMargin ? `${item.targetMargin}%` : '—'}
+                          {item.targetProfitPcs ?? defaultTargetPcs === 0 ? '—' : `
+                            ${item.targetProfitPcs ? money(item.targetProfitPcs) : money(defaultTargetPcs)}
+                          `}
+                        </td>
+                        <td className="mono" data-testid={`harga-min-${item.id}`}>
+                          {productTarget(item, defaultTargetPcs, safetyMarginPercent).minSellingPrice > 0 ? money(productTarget(item, defaultTargetPcs, safetyMarginPercent).minSellingPrice) : '—'}
+                        </td>
+                        <td className="target-cell">
+                          {productTarget(item, defaultTargetPcs, safetyMarginPercent).meetsTarget ? (
+                            <Badge tone="good" data-testid={`badge-target-ok-${item.id}`}>
+                              ✓ Sesuai target
+                            </Badge>
+                          ) : (
+                            <Badge tone="warn" data-testid={`badge-target-warn-${item.id}`}                              title={productTarget(item, defaultTargetPcs, safetyMarginPercent).meta}>
+                              ⚠ Di bawah target
+                            </Badge>
+                          )}
                         </td>
                         <td className="mono">
                           <strong>{number(item.totalSold)} pcs</strong>
@@ -485,6 +539,7 @@ export function MasterPage({
                          <td className="right">
                            <div className="button-pair table-actions">
                              <button
+                               type="button"
                                className="icon-btn"
                                onClick={() => toggle(item)}
                                aria-label={item.isActive ? 'Nonaktifkan produk' : 'Aktifkan produk'}
@@ -493,25 +548,27 @@ export function MasterPage({
                              >
                                <Power size={15} />
                              </button>
-                          <button
-                            className="icon-btn"
-                            onClick={() => {
-                               openEdit(item);
-                            }}
-                            aria-label="Edit"
-                            data-testid={`button-edit-products-${item.id}`}
-                          >
-                            <Pencil size={15} />
-                          </button>
-                           <button
-                             className="icon-btn danger-icon"
-                             onClick={() => remove(item)}
-                             aria-label="Hapus produk"
-                             title="Hapus"
-                             data-testid={`button-delete-products-${item.id}`}
-                           >
-                             <Trash2 size={15} />
-                           </button>
+                             <button
+                               type="button"
+                               className="icon-btn"
+                               onClick={() => {
+                                 openEdit(item);
+                               }}
+                               aria-label="Edit"
+                               data-testid={`button-edit-products-${item.id}`}
+                             >
+                               <Pencil size={15} />
+                             </button>
+                             <button
+                               type="button"
+                               className="icon-btn danger-icon"
+                               onClick={() => remove(item)}
+                               aria-label="Hapus produk"
+                               title="Hapus"
+                               data-testid={`button-delete-products-${item.id}`}
+                             >
+                               <Trash2 size={15} />
+                             </button>
                            </div>
                         </td>
                       </tr>
@@ -533,38 +590,40 @@ export function MasterPage({
                           <Badge tone={item.isActive ? 'good' : 'neutral'}>
                              {item.isActive ? 'Aktif' : 'Diarsipkan'}
                           </Badge>
-                        </td>
-                       <td className="right">
-                         <div className="button-pair table-actions">
-                           <button
-                             className="icon-btn"
-                             onClick={() => toggle(item)}
-                             aria-label={item.isActive ? 'Nonaktifkan toko' : 'Aktifkan toko'}
-                             title={item.isActive ? 'Nonaktifkan' : 'Aktifkan'}
-                             data-testid={`button-toggle-stores-${item.id}`}
-                           >
-                             <Power size={15} />
-                           </button>
-                          <button
-                            className="icon-btn"
-                            onClick={() => {
-                               openEdit(item);
-                            }}
-                            aria-label="Edit"
-                            data-testid={`button-edit-stores-${item.id}`}
-                          >
-                            <Pencil size={15} />
-                          </button>
-                           <button
-                             className="icon-btn danger-icon"
-                             onClick={() => remove(item)}
-                             aria-label="Hapus toko"
-                             title="Hapus"
-                             data-testid={`button-delete-stores-${item.id}`}
-                           >
-                             <Trash2 size={15} />
-                           </button>
-                         </div>
+                        </td>                         <td className="right">
+                           <div className="button-pair table-actions">
+                             <button
+                               type="button"
+                               className="icon-btn"
+                               onClick={() => toggle(item)}
+                               aria-label={item.isActive ? 'Nonaktifkan toko' : 'Aktifkan toko'}
+                               title={item.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                               data-testid={`button-toggle-stores-${item.id}`}
+                             >
+                               <Power size={15} />
+                             </button>
+                             <button
+                               type="button"
+                               className="icon-btn"
+                               onClick={() => {
+                                 openEdit(item);
+                               }}
+                               aria-label="Edit"
+                               data-testid={`button-edit-stores-${item.id}`}
+                             >
+                               <Pencil size={15} />
+                             </button>
+                             <button
+                               type="button"
+                               className="icon-btn danger-icon"
+                               onClick={() => remove(item)}
+                               aria-label="Hapus toko"
+                               title="Hapus"
+                               data-testid={`button-delete-stores-${item.id}`}
+                             >
+                               <Trash2 size={15} />
+                             </button>
+                           </div>
                         </td>
                       </tr>
                     ))}
@@ -607,132 +666,29 @@ export function MasterPage({
           title={`${editing ? 'Edit' : 'Tambah'} ${isProducts ? 'produk' : 'toko'}`}
           onClose={close}
         >
-          <form className="form-grid" onSubmit={submit}>
-            {isProducts ? (
-              <>
-                <Field label="Nama produk">
-                  <input
-                    name="name"
-                    defaultValue={editingProduct?.name}
-                    required
-                    data-testid="input-product-name"
-                  />
-                </Field>
-                 <Field label="Marketplace / kanal">
-                   <select
-                     value={selectedMarketplace}
-                     onChange={(event) => {
-                       const value = event.target.value;
-                       if (value === '__new_marketplace__') {
-                         openNewStore('marketplace');
-                         return;
-                       }
-                       setSelectedMarketplace(value);
-                       setSelectedStoreId(
-                         storeItems.find((store) => store.channel === value && store.isActive)?.id ?? '',
-                       );
-                     }}
-                     required
-                     data-testid="select-product-marketplace"
-                   >
-                     <option value="">Pilih marketplace</option>
-                     {marketplaces.map((channel) => (
-                       <option key={channel} value={channel}>
-                         {channel}
-                       </option>
-                     ))}
-                     <option value="__new_marketplace__">＋ Tambah marketplace baru</option>
-                   </select>
-                 </Field>
-                 <Field label="Toko / brand">
-                   <select
-                     value={selectedStoreId}
-                     onChange={(event) => {
-                       if (event.target.value === '__new_store__') {
-                         openNewStore('store');
-                         return;
-                       }
-                       setSelectedStoreId(event.target.value);
-                     }}
-                     required
-                     disabled={!selectedMarketplace}
-                     data-testid="select-product-store"
-                   >
-                     <option value="">Pilih toko</option>
-                     {storeItems
-                       .filter(
-                         (store) =>
-                           store.channel === selectedMarketplace &&
-                           (store.isActive || store.id === selectedStoreId),
-                       )
-                       .map((store) => (
-                         <option key={store.id} value={store.id}>
-                           {store.name}
-                         </option>
-                       ))}
-                     <option value="__new_store__">＋ Tambah toko baru</option>
-                   </select>
-                 </Field>
-                <Field label="Modal">
-                  <input
-                    name="modal"
-                    type="number"
-                    defaultValue={editingProduct?.modal ?? 0}
-                    min="0"
-                    required
-                    data-testid="input-product-modal"
-                  />
-                </Field>
-                <Field label="Harga jual">
-                  <input
-                    name="sellingPrice"
-                    type="number"
-                    defaultValue={editingProduct?.sellingPrice ?? 0}
-                    min="0"
-                    required
-                    data-testid="input-product-price"
-                  />
-                </Field>
-                <Field label="Target margin (%)">
-                  <input
-                    name="targetMargin"
-                    type="number"
-                    defaultValue={editingProduct?.targetMargin ?? 0}
-                    min="0"
-                    data-testid="input-product-margin"
-                  />
-                </Field>
-                <Field label="Supplier">
-                  <select
-                    value={selectedSupplierId}
-                    onChange={(event) => setSelectedSupplierId(event.target.value)}
-                    data-testid="select-product-supplier"
-                  >
-                    <option value="">Tanpa supplier</option>
-                    {(suppliers.data ?? [])
-                      .filter((supplier) => supplier.isActive || supplier.id === selectedSupplierId)
-                      .map((supplier) => (
-                        <option key={supplier.id} value={supplier.id}>
-                          {supplier.name}
-                        </option>
-                      ))}
-                  </select>
-                </Field>
-                <Field label="Foto produk" hint="JPG, PNG, atau WebP. Otomatis diperkecil dan dikonversi ke WebP.">
-                  <input
-                    name="image"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    data-testid="input-product-image"
-                  />
-                  {editingProduct?.imageUrl && (
-                    <ImagePreviewButton src={editingProduct.imageUrl} alt={`Foto ${editingProduct.name}`} />
-                  )}
-                </Field>
-              </>
-            ) : (
-              <>
-                <Field label="Nama toko">
+          {isProducts ? (
+            <ProductForm
+              key={editing?.id ?? 'new'}
+              editing={editingProduct}
+              storeItems={storeItems}
+              marketplaces={marketplaces}
+              suppliers={suppliers.data ?? []}
+              defaultTargetPcs={profitSettings.data?.defaultTargetProfitPcs ?? 50000}
+              safetyMarginPercent={profitSettings.data?.safetyMarginPercent ?? 0}
+              selectedMarketplace={selectedMarketplace}
+              selectedStoreId={selectedStoreId}
+              selectedSupplierId={selectedSupplierId}
+              onMarketplaceChange={setSelectedMarketplace}
+              onStoreChange={setSelectedStoreId}
+              onSupplierChange={setSelectedSupplierId}
+              onOpenNewStore={openNewStore}
+              onSubmit={submit}
+              onClose={close}
+              pending={createProduct.isPending || updateProduct.isPending}
+            />
+          ) : (
+            <form className="form-grid" onSubmit={submit}>
+              <Field label="Nama toko">
                   <input
                     name="name"
                     defaultValue={editingStore?.name}
@@ -776,25 +732,62 @@ export function MasterPage({
                     data-testid="input-store-fee"
                   />
                 </Field>
-              </>
-            )}
-            <div className="form-actions">
-              <Button type="button" variant="ghost" onClick={close}>
-                Batal
-              </Button>
-              <Button type="submit" data-testid={`button-submit-${kind}`}>
-                Simpan
-              </Button>
-            </div>
-          </form>
+              <div className="form-actions">
+                <Button type="button" variant="ghost" onClick={close}>
+                  Batal
+                </Button>
+                <Button type="submit" data-testid={`button-submit-${kind}`}>
+                  Simpan
+                </Button>
+              </div>
+            </form>
+          )}
         </Modal>
       )}
 
       {confirming && (
-        <ConfirmDialog message={confirming.message} onClose={() => setConfirming(null)} onConfirm={() => {
-          confirming.onConfirm();
-          setConfirming(null);
-        }} />
+        <>
+          <ConfirmDialog message={confirming.message} onClose={() => setConfirming(null)} onConfirm={() => {
+            confirming.onConfirm();
+            setConfirming(null);
+          }} />
+          {confirming?.action === 'view-target' && (
+            <Modal title="Status target produk" onClose={() => setConfirming(null)}>
+              <div className="product-target-modal">
+                <p>
+                  Target produk: <strong>{money(confirming.product.target)}</strong> /pcs
+                  {' '}· Mode: <strong>{confirming.product.mode}</strong>
+                  {' '}· Qty/batch: <strong>{confirming.product.batchQty}</strong>
+                </p>
+                <p>
+                  Harga jual minimum yang disarankan:{' '}
+                  <strong>{money(confirming.product.minSellingPrice)}</strong> /pcs
+                </p>
+                <p>
+                  Status saat ini:{' '}
+                  {confirming.product.meetsTarget ? (
+                    <Badge tone="good">✓ Sesuai target</Badge>
+                  ) : (
+                    <Badge tone="warn">⚠ Di bawah target</Badge>
+                  )}
+                </p>
+                {confirming.product.meta && (
+                  <p>{confirming.product.meta}</p>
+                )}
+              </div>
+              <div className="form-actions">
+                <Button type="button" variant="ghost" onClick={() => setConfirming(null)}>
+                  Tutup
+                </Button>
+                {confirming.product.meetsTarget !== null && (
+                  <Button type="button" variant="secondary" onClick={() => setConfirming(null)}>
+                    Ok
+                  </Button>
+                )}
+              </div>
+            </Modal>
+          )}
+        </>
       )}
 
       {newStoreOpen && (

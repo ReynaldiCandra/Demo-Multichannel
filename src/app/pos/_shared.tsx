@@ -12,6 +12,8 @@ import {
 } from '@/lib/api/hooks';
 import type { ProductRow, SaleRow, SaleStatus } from '@/lib/api/types';
 import { autoPlatformFee } from '@/lib/fees';
+import { calcProfitPerPcs } from '@/lib/profit';
+import { useProfitSettings } from '@/lib/api/hooks';
 import {
   Badge,
   Button,
@@ -40,6 +42,62 @@ export const STATUS_TONE: Record<SaleStatus, 'good' | 'neutral' | 'warn' | 'dang
   sedang_dikirim: 'warn',
 };
 export const PAGE_SIZE = 10;
+
+/**
+ * Evaluasi satu transaksi terhadap target profit produknya.
+ * Target: targetProfitPcs produk, fallback ke default global workspace.
+ * Mode volume dicek terhadap target per batch (profit total transaksi).
+ * NULL = produk tidak punya target yang bisa dievaluasi (mis. harga 0).
+ */
+export function saleTargetCheck(
+  sale: SaleRow,
+  product: ProductRow | undefined,
+  defaultTargetPcs: number,
+  safetyMarginPercent: number,
+): { ok: boolean; target: number; profitPerPcs: number; checked: boolean } {
+  if (!product || sale.status !== 'selesai') {
+    return { ok: true, target: 0, profitPerPcs: 0, checked: false };
+  }
+  const profitPerPcs = calcProfitPerPcs({
+    hpp: sale.modalSnapshot,
+    price: sale.actualPrice,
+    feePercent: product.feePercent,
+    safetyMarginPercent,
+    discountPerUnit: sale.discount / sale.qty,
+  });
+  if (product.profitMode === 'volume' && product.targetProfitBatch) {
+    const target = product.targetProfitBatch;
+    const totalProfit = profitPerPcs * sale.qty;
+    return { ok: totalProfit >= target, target, profitPerPcs, checked: true };
+  }
+  const target = product.targetProfitPcs ?? defaultTargetPcs;
+  return { ok: profitPerPcs >= target, target, profitPerPcs, checked: true };
+}
+
+/** Badge hasil evaluasi target — dipakai tabel Input Harian & Penjualan. */
+export function SaleTargetBadge({
+  sale,
+  product,
+  defaultTargetPcs,
+  safetyMarginPercent,
+}: {
+  sale: SaleRow;
+  product: ProductRow | undefined;
+  defaultTargetPcs: number;
+  safetyMarginPercent: number;
+}) {
+  const check = saleTargetCheck(sale, product, defaultTargetPcs, safetyMarginPercent);
+  if (!check.checked) return null;
+  return check.ok ? (
+    <Badge tone="good" data-testid={`badge-target-ok-${sale.id}`}>
+      ✓ Target tercapai
+    </Badge>
+  ) : (
+    <Badge tone="danger" data-testid={`badge-target-bad-${sale.id}`}>
+      ⚠ Di bawah target
+    </Badge>
+  );
+}
 
 /**
  * Pemilih produk berbasis pencarian (combobox). <select> biasa tidak layak
@@ -240,6 +298,33 @@ export function SaleFormModal({
   });
   const [feeInput, setFeeInput] = useState(String(sale?.platformFee ?? 0));
 
+  // Kalkulator profit real-time: begitu produk/harga/qty berubah, cek target.
+  const profitSettings = useProfitSettings();
+  const saleCheck = productId && product && Number(qty) > 0
+    ? saleTargetCheck(
+        {
+          id: 'preview',
+          productId,
+          productName: product.name,
+          storeName: product.storeName,
+          qty: Number(qty) || 1,
+          actualPrice: Number(price) || 0,
+          modalSnapshot: product.modal,
+          platformFee: feeManual ? Number(feeInput || 0) : autoFee,
+          discount: Number(discount) || 0,
+          grossRevenue: Math.max(Number(qty) * Number(price) - Number(discount), 0),
+          grossProfit: 0,
+          date: '',
+          status: 'selesai',
+          orderNumber: null,
+          imageUrl: null,
+        },
+        product,
+        profitSettings.data?.defaultTargetProfitPcs ?? 50000,
+        profitSettings.data?.safetyMarginPercent ?? 0,
+      )
+    : null;
+
   const chooseProduct = (id: string) => {
     setProductId(id);
     const next = products.find((item) => item.id === id);
@@ -384,6 +469,23 @@ export function SaleFormModal({
           >
             Kembali ke biaya otomatis
           </button>
+        )}
+        {saleCheck?.checked && (
+          <div
+            className={`sale-target-warning ${saleCheck.ok ? 'ok' : 'bad'}`}
+            data-testid="sale-target-warning"
+          >
+            {saleCheck.ok ? (
+              <strong>
+                ✓ Profit {money(saleCheck.profitPerPcs)}/pcs — target {money(saleCheck.target)} tercapai.
+              </strong>
+            ) : (
+              <strong>
+                ⚠ Profit {money(saleCheck.profitPerPcs)}/pcs di bawah target{' '}
+                {money(saleCheck.target)} — transaksi berpotensi merugikan.
+              </strong>
+            )}
+          </div>
         )}
         <div className="form-actions">
           <Button type="button" variant="ghost" onClick={onClose}>
@@ -552,6 +654,7 @@ export function SaleDetailPanel({ sale, onClose }: { sale: SaleRow; onClose: () 
 export function SalesTable({
   sales,
   total,
+  products,
   onEdit,
   onStatus,
   onDelete,
@@ -559,6 +662,8 @@ export function SalesTable({
 }: {
   sales: SaleRow[];
   total: number;
+  /** Katalog produk untuk evaluasi target profit per transaksi. */
+  products?: ProductRow[];
   onEdit: (sale: SaleRow) => void;
   onStatus: (sale: SaleRow, status: SaleStatus) => void;
   /** Panggil confirm({ message, onConfirm }) untuk konfirmasi via dialog in-app. */
@@ -568,6 +673,9 @@ export function SalesTable({
 }) {
   // Ditaruh sebelum early return supaya urutan hook selalu stabil.
   const [confirming, setConfirming] = useState<ConfirmRequest | null>(null);
+  const profitSettings = useProfitSettings();
+  const defaultTargetPcs = profitSettings.data?.defaultTargetProfitPcs ?? 50000;
+  const safetyMarginPercent = profitSettings.data?.safetyMarginPercent ?? 0;
   if (!total) return <State type="empty" />;
 
   return (
@@ -583,6 +691,7 @@ export function SalesTable({
               <th className="right">Qty</th>
               <th className="right">Omzet</th>
               <th className="right">Profit</th>
+              <th>Target</th>
               <th>Status</th>
               <th />
             </tr>
@@ -609,6 +718,16 @@ export function SalesTable({
                   <td className="right mono">{money(sale.grossRevenue)}</td>
                   <td className={cn('right mono', counted && 'profit-text')}>
                     {counted ? money(sale.grossProfit) : '—'}
+                  </td>
+                  <td className="target-cell">
+                    {products && (
+                      <SaleTargetBadge
+                        sale={sale}
+                        product={products.find((item) => item.id === sale.productId)}
+                        defaultTargetPcs={defaultTargetPcs}
+                        safetyMarginPercent={safetyMarginPercent}
+                      />
+                    )}
                   </td>
                   <td>
                     <div className="status-cell">

@@ -57,11 +57,13 @@ export function Switch({
 export function Badge({
   children,
   tone = 'neutral',
+  className,
+  ...props
 }: {
   children: ReactNode;
   tone?: 'neutral' | 'good' | 'warn' | 'danger' | 'yellow';
-}) {
-  return <span className={`badge badge-${tone}`}>{children}</span>;
+} & HTMLAttributes<HTMLSpanElement>) {
+  return <span className={cn(`badge badge-${tone}`, className)} {...props}>{children}</span>;
 }
 
 export function Panel({ children, className = '', ...props }: HTMLAttributes<HTMLDivElement>) {

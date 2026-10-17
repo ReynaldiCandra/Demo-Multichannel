@@ -96,6 +96,17 @@ export const productsTable = pgTable('products', {
   modal: integer('modal').notNull().default(0),
   targetMargin: numeric('target_margin', { precision: 5, scale: 2 }),
   sellingPrice: integer('selling_price').notNull().default(0),
+  /**
+   * Kalkulator profit: target keuntungan bersih per pcs. NULL = pakai
+   * default global workspace (profitSettings.defaultTargetProfitPcs).
+   */
+  targetProfitPcs: integer('target_profit_pcs'),
+  /** Target profit per batch (produk mode volume); pasangan batchQty di bawah. */
+  targetProfitBatch: integer('target_profit_batch'),
+  /** Jumlah pcs per batch — hanya aktif saat profitMode = 'volume'. */
+  targetProfitBatchQty: integer('target_profit_batch_qty'),
+  /** per_pcs | volume — mode kalkulator produk ini. */
+  profitMode: text('profit_mode').notNull().default('per_pcs'),
   supplierName: text('supplier_name'),
   supplierPhone: text('supplier_phone'),
   imageUrl: text('image_url'),
@@ -106,6 +117,24 @@ export const productsTable = pgTable('products', {
   index('products_supplier_id_idx').on(table.supplierId),
   index('products_store_active_idx').on(table.storeId, table.isActive),
 ]);
+
+/**
+ * Pengaturan profit per workspace: default target profit/pcs (dipakai saat
+ * target produk dikosongkan) + margin keamanan % (buffer fluktuasi harga).
+ * Satu baris per workspace, dibuat otomatis saat pertama kali dibaca.
+ */
+export const profitSettingsTable = pgTable('profit_settings', {
+  workspaceId: uuid('workspace_id')
+    .primaryKey()
+    .references(() => workspacesTable.id, { onDelete: 'cascade' }),
+  /** Default target profit bersih per pcs (Rp). Default Rp50.000. */
+  defaultTargetProfitPcs: integer('default_target_profit_pcs').notNull().default(50000),
+  /** Margin keamanan (%) — buffer harga minimum untuk fluktuasi biaya. */
+  safetyMarginPercent: numeric('safety_margin_percent', { precision: 5, scale: 2 })
+    .notNull()
+    .default('0'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const salesTable = pgTable('sales', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -329,6 +358,7 @@ export const liveSessionsTable = pgTable('live_sessions', {
 
 export type Store = typeof storesTable.$inferSelect;
 export type Product = typeof productsTable.$inferSelect;
+export type ProfitSettings = typeof profitSettingsTable.$inferSelect;
 export type Sale = typeof salesTable.$inferSelect;
 export type MetaAdTest = typeof metaAdTestsTable.$inferSelect;
 export type Job = typeof jobsTable.$inferSelect;

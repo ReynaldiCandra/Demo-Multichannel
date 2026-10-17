@@ -34,6 +34,14 @@ export type ProductRow = {
   name: string;
   modal: number;
   targetMargin: number | null;
+  /** Target profit bersih per pcs (Rp); NULL = pakai default global. */
+  targetProfitPcs: number | null;
+  /** Target profit per batch (Rp) — mode volume. */
+  targetProfitBatch: number | null;
+  /** Jumlah pcs per batch untuk mode volume. */
+  targetProfitBatchQty: number | null;
+  /** per_pcs | volume — mode kalkulator produk ini. */
+  profitMode: 'per_pcs' | 'volume';
   sellingPrice: number;
   supplierName: string | null;
   supplierPhone: string | null;
@@ -66,6 +74,14 @@ export type SaleRow = {
 };
 
 export type SaleStatus = 'selesai' | 'batal' | 'retur' | 'sedang_dikirim';
+
+/** Pengaturan profit workspace (Kalkulator Profit). */
+export type ProfitSettingsRow = {
+  /** Default target profit/pcs (Rp) saat target produk kosong. */
+  defaultTargetProfitPcs: number;
+  /** Margin keamanan (%) — buffer harga minimum untuk fluktuasi biaya. */
+  safetyMarginPercent: number;
+};
 
 export type SettlementStatus = 'pending' | 'released';
 

@@ -31,7 +31,15 @@ export const PATCH = handler(async (request: Request, context: Context) => {
     .where(and(eq(productsTable.id, productId), eq(storesTable.workspaceId, ctx.workspaceId)));
   if (!owned) return notFound('Produk tidak ditemukan');
 
-  const { targetMargin, supplierId, ...rest } = parsed.data;
+  const {
+    targetMargin,
+    targetProfitPcs,
+    targetProfitBatch,
+    targetProfitBatchQty,
+    profitMode,
+    supplierId,
+    ...rest
+  } = parsed.data;
   const supplier =
     supplierId === undefined || supplierId === null
       ? null
@@ -60,6 +68,10 @@ export const PATCH = handler(async (request: Request, context: Context) => {
       ...(targetMargin === undefined
         ? {}
         : { targetMargin: targetMargin === null ? null : String(targetMargin) }),
+      ...(targetProfitPcs === undefined ? {} : { targetProfitPcs }),
+      ...(targetProfitBatch === undefined ? {} : { targetProfitBatch }),
+      ...(targetProfitBatchQty === undefined ? {} : { targetProfitBatchQty }),
+      ...(profitMode === undefined ? {} : { profitMode }),
     })
     .where(eq(productsTable.id, productId))
     .returning();
@@ -75,6 +87,7 @@ export const PATCH = handler(async (request: Request, context: Context) => {
     ...product,
     storeName: store?.name ?? 'Toko',
     targetMargin: product.targetMargin == null ? null : Number(product.targetMargin),
+    profitMode: product.profitMode,
   });
 });
 

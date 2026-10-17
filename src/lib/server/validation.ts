@@ -98,6 +98,10 @@ export const ProductInput = z.object({
   modal: z.coerce.number().int().min(0).default(0),
   sellingPrice: z.coerce.number().int().min(0).default(0),
   targetMargin: z.coerce.number().min(0).nullable().optional(),
+  targetProfitPcs: z.coerce.number().int().min(0).nullable().optional(),
+  targetProfitBatch: z.coerce.number().int().min(0).nullable().optional(),
+  targetProfitBatchQty: z.coerce.number().int().min(0).nullable().optional(),
+  profitMode: z.enum(['per_pcs', 'volume']).default('per_pcs'),
   supplierName: nullableText,
   supplierPhone: nullableText,
   imageUrl: z.string().url('URL foto tidak valid').nullable().optional(),
@@ -251,6 +255,19 @@ export const InvoiceInput = z.object({
 export const ModuleUpdateInput = z.object({
   isEnabled: z.boolean(),
 });
+
+/**
+ * Pengaturan profit workspace (Kalkulator Profit). PATCH /api/profit-settings.
+ * Partial: hanya field yang dikirim yang berubah.
+ */
+export const ProfitSettingsInput = z
+  .object({
+    defaultTargetProfitPcs: z.coerce.number().int().min(0).optional(),
+    safetyMarginPercent: z.coerce.number().min(0).max(100).optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'Tidak ada perubahan yang dikirim',
+  });
 
 /**
  * Logo kanal marketplace hasil upload (Pengaturan → Logo kanal).

@@ -13,7 +13,8 @@ import {
 import type { SaleRow, SaleStatus } from '@/lib/api/types';
 import { Button, KpiCard, Panel, PageTitle, Pagination, State } from '@/components/ui';
 import { cn, dateLabel, money, monthNow, monthLabel, number } from '@/lib/format';
-import { PAGE_SIZE, STATUS_LABEL, SaleDetailPanel, SaleFormModal, SalesTable } from '../_shared';
+import { PAGE_SIZE, STATUS_LABEL, SaleDetailPanel, SaleFormModal, SalesTable, saleTargetCheck } from '../_shared';
+import { useProfitSettings } from '@/lib/api/hooks';
 
 export default function PenjualanPage() {
   const [editing, setEditing] = useState<SaleRow | null>(null);
@@ -28,6 +29,7 @@ export default function PenjualanPage() {
   const sales = useListSales({ month, storeId: storeId === 'all' ? undefined : storeId });
   const stores = useListStores();
   const products = useListProducts({ activeOnly: true });
+  const profitSettings = useProfitSettings();
   const update = useUpdateSale();
   const remove = useDeleteSale();
 
@@ -74,6 +76,27 @@ export default function PenjualanPage() {
     const hpp = revenue - profit;
     return { pcs, revenue, profit, transactions, hpp };
   }, [filtered]);
+
+  // KPI kebocoran target: berapa transaksi selesai yang profitnya di bawah
+  // target produk (atau default global) — persen dari seluruh transaksi selesai.
+  const belowTarget = useMemo(() => {
+    const defaultTargetPcs = profitSettings.data?.defaultTargetProfitPcs ?? 50000;
+    const safetyMarginPercent = profitSettings.data?.safetyMarginPercent ?? 0;
+    let below = 0;
+    let counted = 0;
+    for (const sale of filtered) {
+      if (sale.status !== 'selesai') continue;
+      counted += 1;
+      const check = saleTargetCheck(
+        sale,
+        products.data?.find((item) => item.id === sale.productId),
+        defaultTargetPcs,
+        safetyMarginPercent,
+      );
+      if (check.checked && !check.ok) below += 1;
+    }
+    return { below, counted, percent: counted ? Math.round((below / counted) * 1000) / 10 : 0 };
+  }, [filtered, products.data, profitSettings.data]);
 
   return (
     <>
@@ -187,12 +210,24 @@ export default function PenjualanPage() {
               accent="navy"
               icon={Boxes}
             />
+            <KpiCard
+              label="Transaksi di bawah target"
+              value={number(belowTarget.below)}
+              meta={
+                belowTarget.below > 0
+                  ? `${belowTarget.percent}% dari total transaksi selesai`
+                  : 'Semua transaksi selesai mencapai target profit'
+              }
+              accent={belowTarget.below > 0 ? 'red' : 'teal'}
+              icon={ShoppingBag}
+            />
           </div>
 
           <Panel className="table-panel">
             <SalesTable
               sales={filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)}
               total={filtered.length}
+              products={products.data}
               onDetail={(sale) => setDetailing(sale)}
               onEdit={(sale) => {
                 setEditing(sale);

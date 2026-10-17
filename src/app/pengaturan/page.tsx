@@ -7,6 +7,7 @@ import {
   ChevronRight,
   ImageUp,
   Settings2,
+  Target,
   UsersRound,
 } from 'lucide-react';
 import { PageTitle, Panel } from '@/components/ui';
@@ -84,6 +85,14 @@ const NAV_CARDS = [
     icon: CircleUserRound,
     title: 'Profil & keamanan',
     description: 'Foto, nama, dan ganti password akun kamu sendiri.',
+    access: 'Semua pengguna',
+    ownerOnly: false,
+  },
+  {
+    href: '/pengaturan/profit',
+    icon: Target,
+    title: 'Profit & target',
+    description: 'Default target profit/pcs & margin keamanan untuk kalkulator produk.',
     access: 'Semua pengguna',
     ownerOnly: false,
   },
