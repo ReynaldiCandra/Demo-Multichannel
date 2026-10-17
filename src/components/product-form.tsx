@@ -76,187 +76,246 @@ export function ProductForm({
   );
 
   return (
-    <form className="form-grid product-form" onSubmit={onSubmit}>
+    <form className="form-grid" onSubmit={onSubmit}>
       <div className="product-form-grid">
-        <div className="product-form-fields">
-          <Field label="Nama produk">
-            <input
-              name="name"
-              defaultValue={editing?.name}
-              required
-              data-testid="input-product-name"
-            />
-          </Field>
-          <Field label="Marketplace / kanal">
-            <select
-              value={selectedMarketplace}
-              onChange={(event) => {
-                const value = event.target.value;
-                if (value === '__new_marketplace__') {
-                  onOpenNewStore('marketplace');
-                  return;
-                }
-                onMarketplaceChange(value);
-                onStoreChange(
-                  storeItems.find((store) => store.channel === value && store.isActive)?.id ?? '',
-                );
-              }}
-              required
-              data-testid="select-product-marketplace"
-            >
-              <option value="">Pilih marketplace</option>
-              {marketplaces.map((channel) => (
-                <option key={channel} value={channel}>
-                  {channel}
-                </option>
-              ))}
-              <option value="__new_marketplace__">＋ Tambah marketplace baru</option>
-            </select>
-          </Field>
-          <Field label="Toko / brand">
-            <select
-              value={selectedStoreId}
-              onChange={(event) => {
-                if (event.target.value === '__new_store__') {
-                  onOpenNewStore('store');
-                  return;
-                }
-                onStoreChange(event.target.value);
-              }}
-              required
-              disabled={!selectedMarketplace}
-              data-testid="select-product-store"
-            >
-              <option value="">Pilih toko</option>
-              {storeItems
-                .filter(
-                  (store) =>
-                    store.channel === selectedMarketplace &&
-                    (store.isActive || store.id === selectedStoreId),
-                )
-                .map((store) => (
-                  <option key={store.id} value={store.id}>
-                    {store.name}
-                  </option>
-                ))}
-              <option value="__new_store__">＋ Tambah toko baru</option>
-            </select>
-          </Field>
-          <Field label="Modal (HPP supplier)">
-            <input
-              name="modal"
-              type="number"
-              value={hpp}
-              onChange={(event) => setHpp(event.target.value)}
-              min="0"
-              required
-              data-testid="input-product-modal"
-            />
-          </Field>
-          <Field label="Harga jual">
-            <input
-              name="sellingPrice"
-              type="number"
-              value={price}
-              onChange={(event) => setPrice(event.target.value)}
-              min="0"
-              required
-              data-testid="input-product-price"
-            />
-          </Field>
-          <Field label="Mode kalkulator profit">
-            <select
-              name="profitMode"
-              value={profitMode}
-              onChange={(event) => setProfitMode(event.target.value as ProfitMode)}
-              data-testid="select-product-profit-mode"
-            >
-              <option value="per_pcs">Per pcs — target Rp per pcs</option>
-              <option value="volume">Volume — target Rp per blok qty</option>
-            </select>
-          </Field>
-          <Field
-            label="Target profit per pcs"
-            hint={`Kosongkan untuk pakai default ${money(defaultTargetPcs)}.`}
-          >
-            <input
-              name="targetProfitPcs"
-              type="number"
-              value={targetPcs}
-              onChange={(event) => setTargetPcs(event.target.value)}
-              min="0"
-              placeholder={String(defaultTargetPcs)}
-              data-testid="input-product-target-profit"
-            />
-          </Field>
-          {profitMode === 'volume' && (
-            <>
-              <Field label="Target profit per batch">
+
+        {/* ============ KIRI: INFORMASI PRODUK ============ */}
+        <div className="product-form-card product-form-card--info">
+          <div className="product-form-card-head">Informasi Produk</div>
+          <div className="product-form-product-top">
+            <div className="product-form-product-image">
+              {editing?.imageUrl ? (
+                <ImagePreviewButton src={editing.imageUrl} alt={`Foto ${editing.name}`} />
+              ) : (
+                <div className="product-form-product-image-empty">
+                  <span className="product-form-product-image-empty-text">Foto produk</span>
+                </div>
+              )}
+              <div className="product-form-product-actions">
+                <span className="product-form-product-photo-hint">Foto produk</span>
                 <input
-                  name="targetProfitBatch"
-                  type="number"
-                  value={targetBatch}
-                  onChange={(event) => setTargetBatch(event.target.value)}
-                  min="0"
-                  placeholder="Contoh: 300000"
-                  data-testid="input-product-target-batch"
+                  name="image"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="product-form-upload-input"
+                  data-testid="input-product-image"
+                />
+                {editing?.imageUrl && (
+                  <button
+                    type="button"
+                    className="product-form-image-change-btn"
+                    onClick={() => {
+                      const input = document.querySelector('.product-form-upload-input') as HTMLInputElement | null;
+                      input?.click();
+                    }}
+                    data-testid="button-change-product-image"
+                  >
+                    Ubah Gambar
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="product-form-product-fields">
+              <Field label="Nama Produk *">
+                <input
+                  name="name"
+                  defaultValue={editing?.name}
+                  required
+                  data-testid="input-product-name"
                 />
               </Field>
-              <Field label="Jumlah pcs per batch">
-                <input
-                  name="targetProfitBatchQty"
-                  type="number"
-                  value={batchQty}
-                  onChange={(event) => setBatchQty(event.target.value)}
-                  min="1"
-                  placeholder="Contoh: 10"
-                  data-testid="input-product-batch-qty"
-                />
+              <Field label="Kategori">
+                <select
+                  name="category"
+                  defaultValue=""
+                  data-testid="select-product-category"
+                >
+                  <option value="">Pilih kategori</option>
+                  <option value="perlengkapan-rumah-tangga">Perlengkapan Rumah Tangga</option>
+                  <option value="elektronik">Elektronik</option>
+                  <option value="buku">Buku</option>
+                  <option value="olahraga">Olahraga</option>
+                  <option value="kecantikan">Kecantikan</option>
+                  <option value="lainnya">Lainnya</option>
+                </select>
               </Field>
-            </>
-          )}
-          <Field label="Target margin (%)">
-            <input
-              name="targetMargin"
-              type="number"
-              defaultValue={editing?.targetMargin ?? 0}
-              min="0"
-              data-testid="input-product-margin"
-            />
-          </Field>
-          <Field label="Supplier">
-            <select
-              value={selectedSupplierId}
-              onChange={(event) => onSupplierChange(event.target.value)}
-              data-testid="select-product-supplier"
-            >
-              <option value="">Tanpa supplier</option>
-              {suppliers
-                .filter((supplier) => supplier.isActive || supplier.id === selectedSupplierId)
-                .map((supplier) => (
-                  <option key={supplier.id} value={supplier.id}>
-                    {supplier.name}
+            </div>
+          </div>
+
+          <div className="product-form-row-2col">
+            <Field label="Supplier *">
+              <select
+                value={selectedSupplierId}
+                onChange={(event) => onSupplierChange(event.target.value)}
+                data-testid="select-product-supplier"
+              >
+                <option value="">Tanpa supplier</option>
+                {suppliers
+                  .filter((supplier) => supplier.isActive || supplier.id === selectedSupplierId)
+                  .map((supplier) => (
+                    <option key={supplier.id} value={supplier.id}>
+                      {supplier.name}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+            <Field label="Toko *">
+              <select
+                value={selectedStoreId}
+                onChange={(event) => {
+                  if (event.target.value === '__new_store__') {
+                    onOpenNewStore('store');
+                    return;
+                  }
+                  onStoreChange(event.target.value);
+                }}
+                required
+                disabled={!selectedMarketplace}
+                data-testid="select-product-store"
+              >
+                <option value="">Pilih toko</option>
+                {storeItems
+                  .filter(
+                    (store) =>
+                      store.channel === selectedMarketplace &&
+                      (store.isActive || store.id === selectedStoreId),
+                  )
+                  .map((store) => (
+                    <option key={store.id} value={store.id}>
+                      {store.name}
+                    </option>
+                  ))}
+                <option value="__new_store__">＋ Tambah toko baru</option>
+              </select>
+            </Field>
+          </div>
+
+          <div className="product-form-marketplace-row">
+            <Field label="Marketplace / kanal">
+              <select
+                value={selectedMarketplace}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (value === '__new_marketplace__') {
+                    onOpenNewStore('marketplace');
+                    return;
+                  }
+                  onMarketplaceChange(value);
+                  onStoreChange(
+                    storeItems.find((store) => store.channel === value && store.isActive)?.id ?? '',
+                  );
+                }}
+                required
+                data-testid="select-product-marketplace"
+              >
+                <option value="">Pilih marketplace</option>
+                {marketplaces.map((channel) => (
+                  <option key={channel} value={channel}>
+                    {channel}
                   </option>
                 ))}
-            </select>
-          </Field>
-          <Field
-            label="Foto produk"
-            hint="JPG, PNG, atau WebP. Otomatis diperkecil dan dikonversi ke WebP."
-          >
-            <input
-              name="image"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              data-testid="input-product-image"
-            />
-            {editing?.imageUrl && (
-              <ImagePreviewButton src={editing.imageUrl} alt={`Foto ${editing.name}`} />
-            )}
-          </Field>
+                <option value="__new_marketplace__">＋ Tambah marketplace baru</option>
+              </select>
+            </Field>
+          </div>
         </div>
-        <div className="product-form-calc">{calculator}</div>
+
+        {/* ============ KIRI: MODAL & TARGET PROFIT ============ */}
+              <Field label="Marketplace / kanal">
+              <select
+                value={selectedMarketplace}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (value === '__new_marketplace__') {
+                    onOpenNewStore('marketplace');
+                    return;
+                  }
+                  onMarketplaceChange(value);
+                  onStoreChange(
+                    storeItems.find((store) => store.channel === value && store.isActive)?.id ?? '',
+                  );
+                }}
+                required
+                data-testid="select-product-marketplace"
+              >
+                <option value="">Pilih marketplace</option>
+                {marketplaces.map((channel) => (
+                  <option key={channel} value={channel}>
+                    {channel}
+                  </option>
+                ))}
+                <option value="__new_marketplace__">＋ Tambah marketplace baru</option>
+              </select>
+            </Field>
+          </div>
+        </div>
+
+        {/* ============ KIRI: MODAL & TARGET PROFIT ============ */}
+        <div className="product-form-card product-form-card--modal">
+          <div className="product-form-card-head">Modal &amp; Target Profit</div>
+          <div className="product-form-card-fields">
+            <div className="product-form-row">
+              <Field label="HPP (Modal Produk) *">
+                <div className="field-money">
+                  <span className="field-money-symbol">Rp</span>
+                  <input
+                    name="modal"
+                    type="number"
+                    value={hpp}
+                    onChange={(event) => setHpp(event.target.value)}
+                    min="0"
+                    required
+                    data-testid="input-product-modal"
+                  />
+                </div>
+              </Field>
+              <Field
+                label="Target Profit per Pcs"
+                hint="Kosongkan jika ingin menggunakan default Rp50.000"
+              >
+                <div className="field-money">
+                  <span className="field-money-symbol">Rp</span>
+                  <input
+                    name="targetProfitPcs"
+                    type="number"
+                    value={targetPcs}
+                    onChange={(event) => setTargetPcs(event.target.value)}
+                    min="0"
+                    placeholder={String(defaultTargetPcs)}
+                    data-testid="input-product-target-profit"
+                  />
+                </div>
+              </Field>
+            </div>
+            <div className="product-form-field">
+              <Field
+                label="Target Profit per Batch (Qty)"
+                hint="Contoh: per 10 pcs (opsional)"
+              >
+                <div className="field-money">
+                  <span className="field-money-symbol">Rp</span>
+                  <input
+                    name="targetProfitBatch"
+                    type="number"
+                    value={targetBatch}
+                    onChange={(event) => setTargetBatch(event.target.value)}
+                    min="0"
+                    placeholder="300000"
+                    data-testid="input-product-target-batch"
+                  />
+                </div>
+              </Field>
+            </div>
+          </div>
+        </div>
+
+        {/* ============ KANAN: KALKULATOR PROFIT MARKETPLACE ============ */}
+        <div className="product-form-calc">
+          {calculator}
+        </div>
+
       </div>
+
       <div className="form-actions">
         <Button type="button" variant="ghost" onClick={onClose}>
           Batal
