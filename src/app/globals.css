@@ -2232,6 +2232,10 @@ img.workspace-user-avatar { object-fit: cover; }
 .profit-calc-input .field-money input.profit-calc-input-field--no-symbol {
   padding: 9px 28px 9px 11px;
 }
+/* Input dengan simbol Rp di kiri: beri ruang agar angka tidak menimpa simbol */
+.profit-calc-input .field-money:not(:has(.profit-calc-input-field--no-symbol)) input {
+  padding-left: 28px;
+}
 .profit-calc-hitung-btn {
   grid-column: 1 / -1;
   min-height: 39px;
@@ -2359,9 +2363,6 @@ img.workspace-user-avatar { object-fit: cover; }
   .product-form-product-image {
     width: 72px;
     height: 72px;
-  }
-  .field-money input {
-    padding-left: 24px;
   }
   .product-form-calc {
     position: static;
