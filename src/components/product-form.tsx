@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { ProfitCalculator } from '@/components/profit-calculator';
 import { Button, Field, ImagePreviewButton } from '@/components/ui';
 import type { ProductRow, StoreRow, Supplier } from '@/lib/api/types';
@@ -58,6 +58,8 @@ export function ProductForm({
   const [targetPcs, setTargetPcs] = useState(String(editing?.targetProfitPcs ?? ''));
   const [targetBatch, setTargetBatch] = useState(String(editing?.targetProfitBatch ?? ''));
   const [batchQty, setBatchQty] = useState(String(editing?.targetProfitBatchQty ?? ''));
+  const [fileName, setFileName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const feePercent =
     storeItems.find((store) => store.id === selectedStoreId)?.feePercent ?? 0;
@@ -66,23 +68,30 @@ export function ProductForm({
     <ProfitCalculator
       hpp={Number(hpp) || 0}
       feePercent={feePercent}
-      sellingPrice={Number(price) || 0}
+      sellingPrice={price}
       targetProfitPcs={targetPcs ? Number(targetPcs) : defaultTargetPcs}
       targetProfitBatch={Number(targetBatch) || 0}
       batchQty={Number(batchQty) || 1}
       mode={profitMode}
+      onModeChange={setProfitMode}
+      onPriceChange={setPrice}
       safetyMarginPercent={safetyMarginPercent}
     />
   );
 
   return (
-    <form className="form-grid" onSubmit={onSubmit}>
+    <form className="product-form" onSubmit={onSubmit}>
+      {/* Nilai live dari kalkulator ikut terkirim ke submit() induk */}
+      <input type="hidden" name="sellingPrice" value={price} />
+      <input type="hidden" name="profitMode" value={profitMode} />
+      <input type="hidden" name="targetProfitBatchQty" value={batchQty} />
       <div className="product-form-grid">
 
         {/* ============ KIRI: INFORMASI PRODUK ============ */}
         <div className="product-form-card product-form-card--info">
           <div className="product-form-card-head">Informasi Produk</div>
           <div className="product-form-product-top">
+            <div className="product-form-photo-col">
             <div className="product-form-product-image">
               {editing?.imageUrl ? (
                 <ImagePreviewButton src={editing.imageUrl} alt={`Foto ${editing.name}`} />
@@ -91,28 +100,28 @@ export function ProductForm({
                   <span className="product-form-product-image-empty-text">Foto produk</span>
                 </div>
               )}
+            </div>
               <div className="product-form-product-actions">
-                <span className="product-form-product-photo-hint">Foto produk</span>
                 <input
+                  ref={fileInputRef}
                   name="image"
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   className="product-form-upload-input"
                   data-testid="input-product-image"
+                  onChange={(event) => setFileName(event.target.files?.[0]?.name ?? '')}
                 />
-                {editing?.imageUrl && (
-                  <button
-                    type="button"
-                    className="product-form-image-change-btn"
-                    onClick={() => {
-                      const input = document.querySelector('.product-form-upload-input') as HTMLInputElement | null;
-                      input?.click();
-                    }}
-                    data-testid="button-change-product-image"
-                  >
-                    Ubah Gambar
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="product-form-image-change-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                  data-testid="button-change-product-image"
+                >
+                  {editing?.imageUrl ? 'Ubah foto' : 'Unggah foto'}
+                </button>
+                <span className="product-form-product-photo-hint">
+                  {fileName || 'JPG, PNG, atau WEBP'}
+                </span>
               </div>
             </div>
             <div className="product-form-product-fields">
@@ -123,21 +132,6 @@ export function ProductForm({
                   required
                   data-testid="input-product-name"
                 />
-              </Field>
-              <Field label="Kategori">
-                <select
-                  name="category"
-                  defaultValue=""
-                  data-testid="select-product-category"
-                >
-                  <option value="">Pilih kategori</option>
-                  <option value="perlengkapan-rumah-tangga">Perlengkapan Rumah Tangga</option>
-                  <option value="elektronik">Elektronik</option>
-                  <option value="buku">Buku</option>
-                  <option value="olahraga">Olahraga</option>
-                  <option value="kecantikan">Kecantikan</option>
-                  <option value="lainnya">Lainnya</option>
-                </select>
               </Field>
             </div>
           </div>
@@ -192,36 +186,6 @@ export function ProductForm({
 
           <div className="product-form-marketplace-row">
             <Field label="Marketplace / kanal">
-              <select
-                value={selectedMarketplace}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  if (value === '__new_marketplace__') {
-                    onOpenNewStore('marketplace');
-                    return;
-                  }
-                  onMarketplaceChange(value);
-                  onStoreChange(
-                    storeItems.find((store) => store.channel === value && store.isActive)?.id ?? '',
-                  );
-                }}
-                required
-                data-testid="select-product-marketplace"
-              >
-                <option value="">Pilih marketplace</option>
-                {marketplaces.map((channel) => (
-                  <option key={channel} value={channel}>
-                    {channel}
-                  </option>
-                ))}
-                <option value="__new_marketplace__">＋ Tambah marketplace baru</option>
-              </select>
-            </Field>
-          </div>
-        </div>
-
-        {/* ============ KIRI: MODAL & TARGET PROFIT ============ */}
-              <Field label="Marketplace / kanal">
               <select
                 value={selectedMarketplace}
                 onChange={(event) => {

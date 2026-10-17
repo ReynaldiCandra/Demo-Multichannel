@@ -146,14 +146,20 @@ export function Modal({
   title,
   onClose,
   children,
+  wide = false,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  /** Modal lebar untuk formulir dua kolom (mis. form produk). */
+  wide?: boolean;
 }) {
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
-      <div className="modal" onMouseDown={(event) => event.stopPropagation()}>
+      <div
+        className={wide ? 'modal modal-wide' : 'modal'}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <div className="modal-head">
           <div>
             <div className="eyebrow">Formulir</div>

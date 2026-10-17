@@ -590,7 +590,8 @@ export function MasterPage({
                           <Badge tone={item.isActive ? 'good' : 'neutral'}>
                              {item.isActive ? 'Aktif' : 'Diarsipkan'}
                           </Badge>
-                        </td>                         <td className="right">
+                        </td>
+                        <td className="right">
                            <div className="button-pair table-actions">
                              <button
                                type="button"
@@ -665,6 +666,7 @@ export function MasterPage({
         <Modal
           title={`${editing ? 'Edit' : 'Tambah'} ${isProducts ? 'produk' : 'toko'}`}
           onClose={close}
+          wide={isProducts}
         >
           {isProducts ? (
             <ProductForm

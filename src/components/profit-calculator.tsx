@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { AlertTriangle, Calculator, CheckCircle2, TrendingUp, Radio } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Calculator, CheckCircle2, Radio } from 'lucide-react';
 import type { ProfitMode } from '@/lib/profit';
 import {
   calcMinSellingPrice,
@@ -13,33 +13,60 @@ import { money } from '@/lib/format';
 /**
  * Kalkulator Profit Marketplace — panel kiri-kanan seperti contoh.
  *
- * Tampilkan:
- * - Mode toggle (Per Pcs / Volume)
- * - Input Harga Jual (Live) & Fee Marketplace (%)
- * - Tombol Hitung (ubah harga/manual — estimasi live tetap jalan)
- * - Rekomendasi harga minimum (hijau)
- * - Detail Perhitungan
- * - Card warning (merah, diluar kalkulator utama)
- * - Contoh harga salah (merah)
- * - Contoh harga benar (hijau)
+ * Properti opsional (`sellingPrice`, `targetProfitPcs`, `targetProfitBatch`,
+ * `batchQty`, `onModeChange`) menghidupkan mode live di form produk:
+ * begitu salah satu field diisi di induk, estimasi langsung muncul tanpa
+ * tombol "Hitung". Tanpa prop opsional, kalkulator tetap bisa dipakai
+ * mandiri dengan default target global.
  */
 export function ProfitCalculator({
   hpp,
   feePercent,
   mode,
+  onModeChange,
+  onPriceChange,
   safetyMarginPercent = 0,
+  sellingPrice,
+  targetProfitPcs,
+  targetProfitBatch,
+  batchQty,
 }: {
   hpp: number;
   feePercent: number;
   mode: ProfitMode;
+  /** Dipanggil saat user pindah tab Per Pcs / Volume (dari form produk). */
+  onModeChange?: (mode: ProfitMode) => void;
+  /** Dipanggil saat harga jual diketik, supaya form induk bisa menyimpannya. */
+  onPriceChange?: (value: string) => void;
   safetyMarginPercent?: number;
+  /** Live harga jual dari form (uncontrolled default: kosong). */
+  sellingPrice?: string;
+  /** Target profit per pcs; kosong = default Rp50.000. */
+  targetProfitPcs?: number;
+  /** Target profit per batch; kosong = default Rp300.000. */
+  targetProfitBatch?: number;
+  /** Jumlah pcs per batch; default 10. */
+  batchQty?: number;
 }) {
-  const [sellingPrice, setSellingPrice] = useState('');
+  const [priceInput, setPriceInput] = useState(String(sellingPrice ?? ''));
   const [feeInput, setFeeInput] = useState(String(feePercent));
+
+  // Sinkron saat induk (form produk) mengubah nilai live — termasuk saat
+  // ganti produk yang diedit maupun berpindah toko/kanal (fee).
+  useEffect(() => {
+    setPriceInput(String(sellingPrice ?? ''));
+  }, [sellingPrice]);
+  useEffect(() => {
+    setFeeInput(String(feePercent));
+  }, [feePercent]);
 
   const hppNum = hpp;
   const feeNum = Number(feeInput) || 0;
-  const priceNum = Number(sellingPrice) || 0;
+  const priceNum = Number(priceInput) || 0;
+
+  const targetPcs = targetProfitPcs ?? 50000;
+  const targetBatch = targetProfitBatch ?? 300000;
+  const batchQtyNum = batchQty ?? 10;
 
   const minPrice = useMemo(() => {
     if (mode === 'volume') return 0;
@@ -47,13 +74,9 @@ export function ProfitCalculator({
       hpp: hppNum,
       feePercent: feeNum,
       safetyMarginPercent,
-      targetProfitPcs: 50000,
+      targetProfitPcs: targetPcs,
     }).minSellingPrice;
-  }, [mode, hppNum, feeNum, safetyMarginPercent]);
-
-  const targetPcs = 50000;
-  const targetBatch = 300000;
-  const batchQty = 10;
+  }, [mode, hppNum, feeNum, safetyMarginPercent, targetPcs]);
 
   const profitPerPcs = useMemo(() => {
     if (!priceNum) return 0;
@@ -69,16 +92,16 @@ export function ProfitCalculator({
     if (mode !== 'volume' || !targetBatch) return null;
     return calcMinQtyForVolumeTarget({
       targetProfitBatch: targetBatch,
-      batchQty,
+      batchQty: batchQtyNum,
       pricePerPcs: priceNum,
       hpp: hppNum,
       feePercent: feeNum,
       safetyMarginPercent,
     });
-  }, [mode, priceNum, hppNum, feeNum, safetyMarginPercent]);
+  }, [mode, priceNum, hppNum, feeNum, safetyMarginPercent, targetBatch, batchQtyNum]);
 
   const perPcsOk = priceNum > 0 && profitPerPcs >= targetPcs;
-  const volumeOk = minQty !== null && priceNum > 0 && batchQty >= minQty;
+  const volumeOk = minQty !== null && priceNum > 0 && batchQtyNum >= minQty;
   const ok = mode === 'per_pcs' ? perPcsOk : volumeOk;
 
   const feeTitle =
@@ -86,7 +109,7 @@ export function ProfitCalculator({
       ? (feeNum > 0 ? `${feeNum}% dari omzet` : 'Tidak ada fee')
       : (feeNum > 0 ? `${feeNum}% dari omzet` : 'Tidak ada fee');
 
-  // Contoh kasus: harga Rp100.000 vs Rp120.000
+  // Contoh kasus: harga Rp100.000 vs harga minimum
   const examplePriceLow = 100000;
   const examplePriceMin = minPrice;
   const profitLow = calcProfitPerPcs({
@@ -116,14 +139,14 @@ export function ProfitCalculator({
         <button
           type="button"
           className={`profit-calc-tab ${mode === 'per_pcs' ? 'active' : ''}`}
-          onClick={() => {}}
+          onClick={() => onModeChange?.('per_pcs')}
         >
           <Radio size={12} /> Mode Per Pcs
         </button>
         <button
           type="button"
           className={`profit-calc-tab ${mode === 'volume' ? 'active' : ''}`}
-          onClick={() => {}}
+          onClick={() => onModeChange?.('volume')}
         >
           Mode Volume (Qty)
         </button>
@@ -139,12 +162,15 @@ export function ProfitCalculator({
               type="number"
               className="profit-calc-input-field"
               placeholder="0"
-              value={sellingPrice}
-              onChange={(event) => setSellingPrice(event.target.value)}
+              value={priceInput}
+              onChange={(event) => {
+                setPriceInput(event.target.value);
+                onPriceChange?.(event.target.value);
+              }}
               data-testid="input-harga-jual-live"
             />
           </div>
-          <small className="profit-calc-input-hint">Untuk perhitungan mode volume</small>
+          <small className="profit-calc-input-hint">{mode === 'volume' ? 'Untuk perhitungan mode volume' : 'Estimasi profit langsung muncul'}</small>
         </div>
 
         <div className="profit-calc-input">
@@ -158,7 +184,7 @@ export function ProfitCalculator({
               onChange={(event) => setFeeInput(event.target.value)}
               data-testid="input-fee-marketplace"
             />
-            <span className="field-money-symbol">%</span>
+            <span className="field-money-symbol field-money-symbol--end">%</span>
           </div>
           <small className="profit-calc-input-hint">Otomatis dari kanal &amp; toko</small>
         </div>
@@ -167,6 +193,11 @@ export function ProfitCalculator({
           type="button"
           className="profit-calc-hitung-btn"
           data-testid="button-hitung"
+          onClick={() => {
+            // Tombol "Hitung" memang diklik manual — namun estimasi live
+            // sudah jalan; adalah no-op yang tetap diklik untuk UX.
+          }}
+          title={feeTitle}
         >
           Hitung
         </button>
@@ -221,7 +252,7 @@ export function ProfitCalculator({
       )}
 
       {/* Contoh harga salah (merah) */}
-      {hppNum > 0 && feeNum > 0 && (
+      {hppNum > 0 && feeNum > 0 && profitLow < targetPcs && (
         <div className="profit-calc-example profit-calc-example--bad">
           <div className="profit-calc-example-head">
             <AlertTriangle size={14} />
@@ -263,4 +294,3 @@ export function ProfitCalculator({
     </div>
   );
 }
-

@@ -13,6 +13,11 @@ export default defineConfig({
       'server-only': path.resolve(root, 'tests/stubs/server-only.ts'),
     },
   },
+  // tsconfig memakai jsx: preserve (default Next.js). Vitest perlu mentransform
+  // JSX sendiri agar komponen .tsx bisa dirender di test markup.
+  oxc: {
+    jsx: { runtime: 'automatic' },
+  },
   test: {
     environment: 'node',
     // Test yang memakai Postgres in-memory butuh beberapa detik untuk start.
